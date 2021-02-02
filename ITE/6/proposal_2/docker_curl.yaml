@@ -1,0 +1,56 @@
+---
+attester: CurlBuilder
+---
+attestation_type: https://in-toto.io/Provenance/v1
+subject:
+  _:
+    # uncompressed digest - `docker inspect --format '{{.ID}}`
+    # Should we say "oci_image_sha256" to differentiate?
+    sha256: 3c3ff0c379abb1150bb586c7d55848ed4dcde4a6486b6f37d6815aed569332fe
+artifacts:
+  top_level_source:
+    'git+https://github.com/curl/curl-docker.git#branch=master':
+      # Should we say "git_commit_id" to differentiate?
+      sha1: d6525c840a62b398424a78d792f457477135d0cf
+  dependencies:
+    'https://curl.haxx.se/ca/cacert.pem':
+      sha256: 2782f0f8e89c786f40240fc1916677be660fb8d8e25dede50c9f6f7b0c2c2178
+    'container://docker.io/library/alpine:3.11.5':
+      sha256: a187dde48cd289ac374ad8539930628314bc581a481cdb41409c9289419ddb72
+    'alpine:autoconf':
+      sha256: TODO
+    'alpine:automake':
+      sha256: TODO
+    'alpine:build-base':
+      sha256: TODO
+    'alpine:curl':
+      sha256: TODO
+    'alpine:curl-dev':
+      sha256: TODO
+    'alpine:groff':
+      sha256: TODO
+    'alpine:libssh2':
+      sha256: TODO
+    'alpine:libssh2-dev':
+      sha256: TODO
+    'alpine:libssh2-static':
+      sha256: TODO
+    'alpine:libtool':
+      sha256: TODO
+    'alpine:nghttp2':
+      sha256: TODO
+    'alpine:openssl':
+      sha256: TODO
+    'alpine:perl':
+      sha256: TODO
+    'alpine:python3':
+      sha256: TODO
+    'alpine:python3-dev':
+      sha256: TODO
+    'alpine:stunnel':
+      sha256: TODO
+details:
+  entry_point:
+    docker_build:
+      # Implicit: relative to top_level_source[0]
+      dockerfile: alpine/latest/Dockerfile

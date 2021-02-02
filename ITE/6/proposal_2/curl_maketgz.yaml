@@ -1,0 +1,49 @@
+---
+attester: GithubActions
+---
+attestation_type: https://in-toto.io/Provenance/v1
+
+subject:
+  'curl-7.72.0.tar.bz2':
+    sha256: ad91970864102a59765e20ce16216efc9d6ad381471f7accceceab7d905703ef
+  'curl-7.72.0.tar.gz':
+    sha256: d4d5899a3868fbb6ae1856c3e55a32ce35913de3956d1973caccd37bd0174fa2
+  'curl-7.72.0.tar.xz':
+    sha256: 0ded0808c4d85f2ee0db86980ae610cc9d165e9ca9da466196cc73c346513713
+  'curl-7.72.0.zip':
+    sha256: e363cc5b4e500bfc727106434a2578b38440aa18e105d57576f3d8f2abebf888
+
+artifacts:
+  top_level_source:
+    'git+https://github.com/curl/curl.git#checkout=curl-7_72_0':
+      git_commit: 9d954e49bce3706a9a2efb119ecd05767f0f2a9e
+  dependencies:
+    'azure_hosted_vm://ubuntu-18.04':  # how do we identify this?
+      sha256: ...
+    'container://docker.io/library/debian:9':
+      oci_image_id: sha256:62ace29a8c8fa2d2012fef51efbbd60d305e81c2f616b300dbcba9d8cb63900c
+      container_repo_digest: sha256:7f2706b124ee835c3bcd7dc81d151d4f5eca3f4306c5af5c73848f5f89f10e0b
+    'https://deb.debian.org/debian/pool/main/c/curl/curl_7.72.0-1.debian.tar.xz':
+    # TODO
+  system:
+    # Maybe...
+
+details:
+  # https://github.com/golang/go/blob/master/src/go/build/syslist.go
+  build_arch: amd64  # GOARCH
+  build_os: linux    # GOOS
+  entry_point:
+    # Perhaps should be a URI instead of a short name? Or maybe registered short
+    # names as aliases for common URIs?
+    github_actions:
+      workflow: build.yaml
+      job: build
+      # GitHub hosted values are ubuntu-*, macos-*, etc.
+      # Self-hosted is "self-hosted". In that case we'd also want to record
+      # something about the system it ran on, but for now we can just not trust
+      # "self-hosted" values.
+      runner: ubuntu-latest  # can be "self-hosted" for external; en
+      # If there were parameters specified, use them here.
+      inputs: {}
+      # An imaginary "hermetic" setting.
+      hermetic: false

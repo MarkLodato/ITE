@@ -1,0 +1,50 @@
+---
+attester: CurlBuilder
+---
+attestation_type: https://in-toto.io/Provenance/v1
+subject:
+  digest:
+    # uncompressed digest - `docker inspect --format '{{.ID}}`
+    oci_image_sha256: 3c3ff0c379abb1150bb586c7d55848ed4dcde4a6486b6f37d6815aed569332fe
+relations:
+  top_level_source:
+    - resource:
+        git:
+          url: https://github.com/curl/curl-docker.git
+          branch: master
+      digest:
+        git_commit_id: d6525c840a62b398424a78d792f457477135d0cf
+  dependencies:
+    - resource:
+        http:
+          url: https://curl.haxx.se/ca/cacert.pem
+      digest:
+        sha256: 2782f0f8e89c786f40240fc1916677be660fb8d8e25dede50c9f6f7b0c2c2178
+    - resource:
+        container:
+          url: docker.io/library/alpine:3.11.5
+      digest:
+        oci_image_sha256: a187dde48cd289ac374ad8539930628314bc581a481cdb41409c9289419ddb72
+    - resource: { alpine: { package: autoconf } }
+    - resource: { alpine: { package: automake } }
+    - resource: { alpine: { package: build-base } }
+    - resource: { alpine: { package: curl } }
+    - resource: { alpine: { package: curl-dev } }
+    - resource: { alpine: { package: groff } }
+    - resource: { alpine: { package: libssh2 } }
+    - resource: { alpine: { package: libssh2-dev } }
+    - resource: { alpine: { package: libssh2-static } }
+    - resource: { alpine: { package: libtool } }
+    - resource: { alpine: { package: nghttp2 } }
+    - resource: { alpine: { package: openssl } }
+    - resource: { alpine: { package: perl } }
+    - resource: { alpine: { package: python3 } }
+    - resource: { alpine: { package: python3-dev } }
+    - resource: { alpine: { package: stunnel } }
+details:
+  entry_point:
+    docker_build:
+      # Implicit: relative to top_level_source[0]
+      dockerfile: alpine/latest/Dockerfile
+
+

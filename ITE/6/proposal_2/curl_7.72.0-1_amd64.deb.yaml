@@ -1,0 +1,54 @@
+---
+attester: DebianBuilder
+---
+attestation_type: https://in-toto.io/Provenance/v1
+
+subject:
+  # If there's a single subject, no need to disambiguate. Otherwise consumers
+  # MUST choose which resource. If there is no natural resource name, use '_'.
+  'curl-dbgsym_7.72.0-1_amd64.deb':
+    sha256: 3f9da5f162b2ebe83daaa500dfa8f28e00ecbc9f74ce9965b0a66fb6f6eeec39
+  'curl_7.72.0-1_amd64.deb':
+    sha256: aec36ee0d4e226edc689158885e07f7327a58aa8f4c38fc1c4e1a46c3a012efe
+  'libcurl3-gnutls-dbgsym_7.72.0-1_amd64.deb':
+    sha256: aac3590982a8b80702e9782bdfccec1621afcff7104c80bcac16f821e2456020
+  'libcurl3-gnutls_7.72.0-1_amd64.deb':
+    sha256: 93a656bfce50ab959623cca2eb4980a45b902d58cbf229e4d246041962f9805d
+  'libcurl3-nss-dbgsym_7.72.0-1_amd64.deb':
+    sha256: 7faea6995a7deb295264176f9d983ed0e6b72c323cc50559f1a62c8b3da1fc9f
+  'libcurl3-nss_7.72.0-1_amd64.deb':
+    sha256: be04699ddaac1f5e051fec073d93d1afb063fea280ba614acfdf5d6ebe3a36d8
+  'libcurl4-dbgsym_7.72.0-1_amd64.deb':
+    sha256: 859aca3135a845219a11b9aff4a6a18c503d66ca6c7338d7135d3ac486e0916f
+  'libcurl4-gnutls-dev_7.72.0-1_amd64.deb':
+    sha256: 6e78fd1aa55b334cd828c6bdb4766a5ced824a467973a719ff10ab0b161022bc
+  'libcurl4-nss-dev_7.72.0-1_amd64.deb':
+    sha256: 0f41ffe270e645c7d1d4fd1ae4023d2ec009e87b2de8a8244a7a71deecda4599
+  'libcurl4-openssl-dev_7.72.0-1_amd64.deb':
+    sha256: 36473c8e260f669869b3389c2f1ffd71cf0108cf69da849a13d8699268cc40ab
+  'libcurl4_7.72.0-1_amd64.deb':
+    sha256: b178430e554f84fce4f83cc657eb652b81783de742299599f736e87bdcc132bb
+
+artifacts:
+  top_level_source:
+    # TODO: Is this really the top-level source, or should it be some higher
+    # level thing pointing to this? Were there any other top-level sources too?
+    'https://deb.debian.org/debian/pool/main/c/curl/curl_7.72.0-1.dsc':
+      sha256: be18fbdc46034126e505dc04f98a8b36fc32a287441c08e2211ed6a1074b606c
+  dependencies:
+    'https://deb.debian.org/debian/pool/main/c/curl/curl_7.72.0-1.debian.tar.xz':
+      sha256: 158ef5b94633cf4dc3a74ce3c7d807af3f711621cf51638b8a12ca952a988a39
+    'https://deb.debian.org/debian/pool/main/c/curl/curl_7.72.0.orig.tar.gz':
+      # Note: this matches https://curl.se/download/curl-7.72.0.tar.gz
+      sha256: d4d5899a3868fbb6ae1856c3e55a32ce35913de3956d1973caccd37bd0174fa2
+
+details:
+  architecture: amd64
+  # build_architecture defaults to architecture
+  entry_point:
+    dpkg_build: {}
+  working_directory: /build/curl-UMhrJg/curl-7.72.0
+  environment_variables:
+    DEB_BUILD_OPTIONS: parallel=4
+    LC_ALL: C.UTF-8
+    SOURCE_DATE_EPOCH: "1598257572"

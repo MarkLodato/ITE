@@ -1,0 +1,70 @@
+---
+attester: GithubActions
+---
+attestation_type: https://github.com/attestations/GithubActionWorkflow/v1
+# In this version, I just output things in natural language. Then we can try to
+# generalize once we see patterns.
+
+products:
+  'curl-7.72.0.tar.bz2':
+    sha256: ad91970864102a59765e20ce16216efc9d6ad381471f7accceceab7d905703ef
+  'curl-7.72.0.tar.gz':
+    sha256: d4d5899a3868fbb6ae1856c3e55a32ce35913de3956d1973caccd37bd0174fa2
+  'curl-7.72.0.tar.xz':
+    sha256: 0ded0808c4d85f2ee0db86980ae610cc9d165e9ca9da466196cc73c346513713
+  'curl-7.72.0.zip':
+    sha256: e363cc5b4e500bfc727106434a2578b38440aa18e105d57576f3d8f2abebf888
+
+materials:
+  # Top-level source == repo that defined the workflow.
+  workflow:
+    'curl/curl@curl-7_72_0':
+      commit: 9d954e49bce3706a9a2efb119ecd05767f0f2a9e
+
+  # The base image that the runner started with.
+  virtual_environment:
+    # Resource:
+    image_name: ubuntu-18.04
+    image_version: 20210123.1
+    # Artifact
+    sha256: ...  # Is this possible?
+
+  github_actions:
+    'actions/checkout@v2':
+      commit: 5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+    'actions/upload-artifact@v2':
+      commit: e448a9b857ee2131e752b06002bf0e093c65e571
+
+  # list checked out repos if different than workflow
+  git_repos: {}
+
+  ubuntu_apt_packages:
+    'stunnel4':
+      sha256: ... # hash of .deb file
+    'python-impacket':
+      sha256: ...
+    'libzstd-dev':
+      sha256: ...
+    'libbrotli-dev':
+      sha256: ...
+    # plus all their dependencies
+
+  # If any docker images are pulled.
+  docker_images: {}
+
+
+details:
+  entry_point:
+    workflow: build.yaml
+    job: build
+    # If there were parameters specified, use them here.
+    inputs: {}  # default
+
+  runner:
+    # https://github.com/golang/go/blob/master/src/go/build/syslist.go
+    arch: amd64           # GOARCH
+    os: linux             # GOOS
+    hosting: github       # or self
+    image: ubuntu-latest  # if hosting == github
+    # An imaginary "hermetic" setting.
+    hermetic: false
