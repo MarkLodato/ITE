@@ -41,9 +41,6 @@ subject:
 
 # --- Fields specific to provenance type ---
 
-# TODO: Do a comprehensive review of CI/CD systems and see if they all cleanly
-# fit into this schema, adjusting as appropriate.
-
 # The system that executed the build steps. In many cases, the builder is
 # different from the attester.
 #
@@ -69,7 +66,7 @@ builder:
 #
 # For Github Actions, this is the repository containing the workflow definition.
 top_level_source:
-  'git+https://github.com/curl/curl#ref=curl-7_72_0':
+  'git+https://github.com/curl/curl#tag=curl-7_72_0':
     git_commit: 9d954e49bce3706a9a2efb119ecd05767f0f2a9e
 
 # The entry point into the build, containing all inputs that are user-specified.
@@ -96,9 +93,9 @@ dependencies:
     sha256: ...  # Is this possible?
 
   # The Github Actions used in the workflow.
-  'git+https://github.com/actions/checkout#ref=v2':
+  'git+https://github.com/actions/checkout#tag=v2':
     git_commit: 5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-  'git+https://github.com/actions/upload-artifact#ref=v2':
+  'git+https://github.com/actions/upload-artifact#tag=v2':
     git_commit: e448a9b857ee2131e752b06002bf0e093c65e571
 
   # Apt packages installed by the workflow.
