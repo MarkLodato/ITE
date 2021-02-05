@@ -33,9 +33,18 @@ Lists:
         *   parameters:
             *   `inputs` for
                 [workflow_dispatch](https://docs.github.com/en/actions/managing-workflow-runs/manually-running-a-workflow)
-    *   isolation: runs in a VM
+    *   isolation: n/a (self-hosted)
 
 *   [GitLab CI/CD](https://docs.gitlab.com/ee/ci/)
+
+    *   source: git repo on GitLab or Github
+    *   builder:
+        *   orchestrator: hosted
+        *   worker: custom (called a "runner")
+    *   build steps:
+        *   configuration: source
+        *   id:
+        *   parameters:
 
 *   [Google Cloud Build](https://cloud.google.com/cloud-build/docs) - Triggers
 

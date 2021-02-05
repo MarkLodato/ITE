@@ -75,7 +75,7 @@ entry_point:
   # is specific to the subtype.
   #
   # For Github Actions, it is "<workflow>:<job>".
-  target: build.yaml:build
+  target: github_actions:build.yaml:maketgz
 
   # Set of input arguments that influenced the build on top of `id`. The meaning
   # is specific to subtype and can be any JSON type. Unset, null, and empty
@@ -87,6 +87,8 @@ entry_point:
 # The set of all other artifacts that were required for the build, transitively.
 # The format is the same as `top_level_source`. It MUST be complete if
 # `properties.dependencies_complete` is true, otherwise it MAY be incomplete.
+# TODO: Should we have some way to classify the dependencies, if that
+# information is available?
 dependencies:
   # The runner VM base image.
   'github_hosted_vm:ubuntu-18.04:20210123.1':
@@ -110,14 +112,12 @@ dependencies:
     sha256: ...
   # plus all their dependencies
 
-# Other security relevant properties of the build.
-properties:
-  # If true, `dependencies` is guaranteed to be complete, usually through some
-  # controls to prevent network access.
-  #
-  # For Github Actions, this is always false today, but we hope that eventually
-  # such a feature gets built.
-  dependencies_complete: false
+# If true, `dependencies` is guaranteed to be complete, usually through some
+# controls to prevent network access.
+#
+# For Github Actions, this is always false today, but we hope that eventually
+# such a feature gets built.
+dependencies_complete: false
 
 # The timestamp of when the build occurred. This is often very useful for
 # debugging.
