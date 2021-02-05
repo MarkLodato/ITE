@@ -1,14 +1,25 @@
-# Provenance
-
-## Schema
-
-See [provenance_curl_maketgz.yaml](examples/provenance_curl_maketgz.yaml).
-(TODO: Move docs here)
-
-## Appendix: Review of CI/CD systems
+# Appendix: Review of CI/CD systems
 
 The intention is to do a comprehensive review of all widely used CI/CD systems
-and see if they cleanly fit into the schema.
+and make sure they cleanly fit into the schema.
+
+Lists:
+
+*   [awesome-ciandcd](https://github.com/cicdops/awesome-ciandcd)
+*   [awesome-ci](https://github.com/ligurio/awesome-ci)
+*   [TeamCity-CI](https://github.com/HariSekhon/TeamCity-CI#ci-systems)
+
+## Cloud Hosted
+
+*   [AWS CodeBuild](https://docs.aws.amazon.com/codebuild/index.html)
+
+*   [Azure Pipelines](https://docs.microsoft.com/en-us/azure/devops/pipelines/)
+
+*   [Bitbucket Pipelines](https://support.atlassian.com/bitbucket-cloud/docs/build-test-and-deploy-with-pipelines/)
+
+*   [Circle CI](https://circleci.com/docs/)
+
+*   [Cirrus CI](https://cirrus-ci.org/guide/quick-start/)
 
 *   [Github Actions](https://docs.github.com/en/actions)
 
@@ -23,6 +34,8 @@ and see if they cleanly fit into the schema.
             *   `inputs` for
                 [workflow_dispatch](https://docs.github.com/en/actions/managing-workflow-runs/manually-running-a-workflow)
     *   isolation: runs in a VM
+
+*   [GitLab CI/CD](https://docs.gitlab.com/ee/ci/)
 
 *   [Google Cloud Build](https://cloud.google.com/cloud-build/docs) - Triggers
 
@@ -49,8 +62,6 @@ and see if they cleanly fit into the schema.
                 if `filename` is used, which specifies the path to the config
     *   runs in a Docker container
 
-### Not fully automated
-
 *   [Google Cloud Build](https://cloud.google.com/cloud-build/docs) - Manual
     Builds
 
@@ -63,3 +74,11 @@ and see if they cleanly fit into the schema.
             *   NOTE: includes build directory and substitutions!
         *   NOTE: It's not at all clear what happens when you use the `gcloud`
             command. I'm guessing it uploads a tarball to GCS?
+
+*   [Semaphore](https://docs.semaphoreci.com)
+
+*   [Travis CI](https://docs.travis-ci.com)
+
+## Self-Hosted
+
+TODO
