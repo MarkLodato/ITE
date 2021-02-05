@@ -1,11 +1,35 @@
----
-attester: GithubActions
----
-attestation_type: https://github.com/attestations/GithubActionWorkflow/v1
-# In this version, I just output things in natural language. Then we can try to
-# generalize once we see patterns.
+--- # Metadata
 
-products:
+# The entity that made the attestation. It is not a real field. Verifiers are
+# expected to map verification keys attester IDs.
+attester: GithubActions
+
+--- # Payload
+
+# --- Fields present in all attestations ---
+
+# Type and subtype define what this attestation means and the schema for the
+# rest of the payload. The type defines the overall structure and meaning, while
+# subtype define how to interpret specific fields. Only a small set of
+# well-defined types are expected.
+#
+# Provenance explains the fully automated process that produced the subject.
+# If a manual process was used (so-and-so ran command "foo"), a different type
+# is used.
+type: https://in-toto.io/Provenance/v1
+
+# Github Actions has its own provenance subtype, which defines the meaning of
+# fields such as builder.id and entry_point.id.
+# TODO: It is not clear whether we really need this.
+subtype: https://github.com/attestations/provenance/tree/actions/v1
+
+# The collection of artifacts that this attestation is about. The key is an
+# identifier for the artifact and the value is a set of digests. If there is a
+# single artifact and the name is not meaningful, use "_" as the key. Otherwise
+# verifiers MUST match the name as part of the policy.
+#
+# For provenance, it is the products of the build process.
+subject:
   'curl-7.72.0.tar.bz2':
     sha256: ad91970864102a59765e20ce16216efc9d6ad381471f7accceceab7d905703ef
   'curl-7.72.0.tar.gz':
@@ -15,56 +39,107 @@ products:
   'curl-7.72.0.zip':
     sha256: e363cc5b4e500bfc727106434a2578b38440aa18e105d57576f3d8f2abebf888
 
-materials:
-  # Top-level source == repo that defined the workflow.
-  workflow:
-    'curl/curl@curl-7_72_0':
-      commit: 9d954e49bce3706a9a2efb119ecd05767f0f2a9e
+# --- Fields specific to provenance type ---
 
-  # The base image that the runner started with.
-  virtual_environment:
-    # Resource:
-    image_name: ubuntu-18.04
-    image_version: 20210123.1
-    # Artifact
+# TODO: Do a comprehensive review of CI/CD systems and see if they all cleanly
+# fit into this schema, adjusting as appropriate.
+
+# The system that executed the build steps. In many cases, the builder is
+# different from the attester.
+#
+# For Github Actions, this is the runner.
+# TODO: Should this list *both* the ochestrator (Github Actions) and the runner?
+builder:
+  # String to identify what system the build ran on. The interpretation is
+  # specific to the subtype.
+  # TODO: Should this instead be a universal ID?
+  #
+  # For Github Actions, it is "github-hosted" or "self-hosted".
+  # TODO: For self-hosted, can/should we identify which runner it was?
+  id: github_actions:github-hosted
+
+  # TODO: Should we allow subtypes to add custom fields? If so, should we
+  # standardize how those are added so that verifiers can easily check "no
+  # custom fields were specified"? (Same for entry_point.)
+
+# The set of input artifacts that were not referenced by any other artifact.
+# This is almost always a single artifact containing the top-level build script
+# and usually also the source code. The key is a Resource URI and the value is a
+# set of Artifact Digests.
+#
+# For Github Actions, this is the repository containing the workflow definition.
+top_level_source:
+  'git+https://github.com/curl/curl#ref=curl-7_72_0':
+    git_commit: 9d954e49bce3706a9a2efb119ecd05767f0f2a9e
+
+# The entry point into the build, containing all inputs that are user-specified.
+entry_point:
+  # String to identify the entry point, relative to `source`. The interpretation
+  # is specific to the subtype.
+  #
+  # For Github Actions, it is "<workflow>:<job>".
+  target: build.yaml:build
+
+  # Set of input arguments that influenced the build on top of `id`. The meaning
+  # is specific to subtype and can be any JSON type. Unset, null, and empty
+  # string/array/object MUST be considered equivalent, meaning "no arguments."
+  #
+  # For Github Actions, it is workflow_dispatch inputs. (TODO: any others?)
+  arguments: null
+
+# The set of all other artifacts that were required for the build, transitively.
+# The format is the same as `top_level_source`. It MUST be complete if
+# `properties.dependencies_complete` is true, otherwise it MAY be incomplete.
+dependencies:
+  # The runner VM base image.
+  'github_hosted_vm:ubuntu-18.04:20210123.1':
     sha256: ...  # Is this possible?
 
-  github_actions:
-    'actions/checkout@v2':
-      commit: 5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-    'actions/upload-artifact@v2':
-      commit: e448a9b857ee2131e752b06002bf0e093c65e571
+  # The Github Actions used in the workflow.
+  'git+https://github.com/actions/checkout#ref=v2':
+    git_commit: 5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+  'git+https://github.com/actions/upload-artifact#ref=v2':
+    git_commit: e448a9b857ee2131e752b06002bf0e093c65e571
 
-  # list checked out repos if different than workflow
-  git_repos: {}
+  # Apt packages installed by the workflow.
+  # TODO: should we use shorter URNs?
+  'https://deb.debian.org/debian/pool/main/s/stunnel4/stunnel4_5.50-3_amd64.deb':
+    sha256: e1731ae217fcbc64d4c00d707dcead45c828c5f762bcf8cc56d87de511e096fa
+  'https://deb.debian.org/debian/pool/main/i/impacket/python-impacket_0.9.15-5_all.deb':
+    sha256: 71fa2e67376c8bc03429e154628ddd7b196ccf9e79dec7319f9c3a312fd76469
+  'apt:debian-main:libzstd-dev':
+    sha256: ...
+  'debian-apt:libbrotli-dev':
+    sha256: ...
+  # plus all their dependencies
 
-  ubuntu_apt_packages:
-    'stunnel4':
-      sha256: ... # hash of .deb file
-    'python-impacket':
-      sha256: ...
-    'libzstd-dev':
-      sha256: ...
-    'libbrotli-dev':
-      sha256: ...
-    # plus all their dependencies
+# Other security relevant properties of the build.
+properties:
+  # If true, `dependencies` is guaranteed to be complete, usually through some
+  # controls to prevent network access.
+  #
+  # For Github Actions, this is always false today, but we hope that eventually
+  # such a feature gets built.
+  dependencies_complete: false
 
-  # If any docker images are pulled.
-  docker_images: {}
+# The timestamp of when the build occurred. This is often very useful for
+# debugging.
+build_timestamp: '2020-08-19T08:38:00Z'
 
+# Other information that is needed to reproduce the build but that cannot be
+# controlled by users.
+reproducibility_info:
+  # The architecture and operating system that the builder ran on.
+  # https://github.com/golang/go/blob/master/src/go/build/syslist.go
+  arch: amd64           # GOARCH
+  os: linux             # GOOS
 
-details:
-  entry_point:
-    workflow: build.yaml
-    job: build
-    # If there were parameters specified, use them here.
-    inputs: {}  # default
+  # Github-specific fields:
+  context:
+    # TODO: Should we record any other context fields that affected the build?
+    # https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions
 
-  runner:
-    # https://github.com/golang/go/blob/master/src/go/build/syslist.go
-    arch: amd64           # GOARCH
-    os: linux             # GOOS
-    hosting: github       # or self
-    image: ubuntu-latest  # if hosting == github
-    # An imaginary "hermetic" setting.
-    hermetic: false
+# Extra information about the build. Schema depends entirely on subtype.
+# TODO: Explain that this information was derived from the sources but is
+# included here for debugging purposes.
+extra:
