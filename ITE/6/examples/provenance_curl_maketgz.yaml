@@ -2,26 +2,17 @@
 
 # The entity that made the attestation. It is not a real field. Verifiers are
 # expected to map verification keys attester IDs.
-attester: GithubActions
+attester: GitHubActions
 
 --- # Payload
 
 # --- Fields present in all attestations ---
 
-# Type and subtype define what this attestation means and the schema for the
-# rest of the payload. The type defines the overall structure and meaning, while
-# subtype define how to interpret specific fields. Only a small set of
-# well-defined types are expected.
+# URI identifying what this attestation means and the schema for the rest of the
+# payload. Only a small set of well-defined types are expected.
 #
-# Provenance explains the fully automated process that produced the subject.
-# If a manual process was used (so-and-so ran command "foo"), a different type
-# is used.
+# Provenance explains the process that produced the subject.
 type: https://in-toto.io/Provenance/v1
-
-# Github Actions has its own provenance subtype, which defines the meaning of
-# fields such as builder.id and entry_point.id.
-# TODO: It is not clear whether we really need this.
-subtype: https://github.com/attestations/provenance/tree/actions/v1
 
 # The collection of artifacts that this attestation is about. The key is an
 # identifier for the artifact and the value is a set of digests. If there is a
@@ -41,102 +32,125 @@ subject:
 
 # --- Fields specific to provenance type ---
 
-# The system that executed the build steps. In many cases, the builder is
-# different from the attester.
-#
-# For Github Actions, this is the runner.
-# TODO: Should this list *both* the ochestrator (Github Actions) and the runner?
+# Idenfifies the entity that executed the build steps. In many cases, the
+# builder is different from the attester.
 builder:
-  # String to identify what system the build ran on. The interpretation is
-  # specific to the subtype.
-  # TODO: Should this instead be a universal ID?
+  # URI indicating the builder's identity as well as the schema of this object.
   #
-  # For Github Actions, it is "github-hosted" or "self-hosted".
-  # TODO: For self-hosted, can/should we identify which runner it was?
-  id: github_actions:github-hosted
+  # The following value means that the build was executed by GitHub Actions.
+  id: https://github.com/actions/attestations/tree/v1/builder
 
-  # TODO: Should we allow subtypes to add custom fields? If so, should we
-  # standardize how those are added so that verifiers can easily check "no
-  # custom fields were specified"? (Same for entry_point.)
+  # The rest of the fields are specific to `id`.
 
-# The set of input artifacts that were not referenced by any other artifact.
-# This is almost always a single artifact containing the top-level build script
-# and usually also the source code. The key is a Resource URI and the value is a
-# set of Artifact Digests.
-#
-# For Github Actions, this is the repository containing the workflow definition.
-top_level_source:
-  'git+https://github.com/curl/curl#tag=curl-7_72_0':
-    git_commit: 9d954e49bce3706a9a2efb119ecd05767f0f2a9e
+  # String identifying what system ran the actual build actions. It is either
+  # "github-hosted" or some TBD identifier for a self-hosted runner.
+  runner: github-hosted
 
-# The entry point into the build, containing all inputs that are user-specified.
-entry_point:
-  # String to identify the entry point, relative to `source`. The interpretation
-  # is specific to the subtype.
+# Describes the actions that the builder performed.
+recipe:
+  # URI indicating what type of recipe was performed. It determines the meaning
+  # of `entry_point`, `arguments`, and the top-level `materials` and
+  # `reproducibility`.
   #
-  # For Github Actions, it is "<workflow>:<job>".
-  target: github_actions:build.yaml:maketgz
+  # The following value means that the recipe is a GitHub Actions Workflow.
+  type: https://github.com/actions/attestations/tree/v1/recipe
 
-  # Set of input arguments that influenced the build on top of `id`. The meaning
-  # is specific to subtype and can be any JSON type. Unset, null, and empty
-  # string/array/object MUST be considered equivalent, meaning "no arguments."
+  # String identifying the entry point. The meaning is defined by `type`.
   #
-  # For Github Actions, it is workflow_dispatch inputs. (TODO: any others?)
+  # For GitHub Actions Workflow, it is "<workflow>:<job>", where:
+  # - `<workflow>` is the filename within `.github/workflows/` in the top-level
+  #   `materials.source`, which must list a single git repository.
+  # - `<job>` is the job ID within the workflow definition.
+  entry_point: build.yaml:maketgz
+
+  # Set of input arguments that influenced the build on top of `entry_point`.
+  # It is an object whose schema is defined by `type`, or may be null or
+  # undefined to indicate "no arguments."
+  #
+  # For GitHub Actions Workflow, it is the workflow_dispatch inputs.
+  # (TODO: any others?)
   arguments: null
 
-# The set of all other artifacts that were required for the build, transitively.
-# The format is the same as `top_level_source`. It MUST be complete if
-# `properties.dependencies_complete` is true, otherwise it MAY be incomplete.
-# TODO: Should we have some way to classify the dependencies, if that
-# information is available?
-dependencies:
-  # The runner VM base image.
-  'github_hosted_vm:ubuntu-18.04:20210123.1':
-    sha256: ...  # Is this possible?
+# The set of input artifacts that influenced the build. It is an object of the
+# form `materials: { <resource_type>: { <resource_uri>: { <digests> } } }`,
+# where:
+# - `<resource_type>` is a string indicating how this resource was used, as
+#   defined by `recipe.type`.
+# - `<resource_uri>` is a URI identifying the resource. Usually this is the
+#   location from which the resource was fetched.
+# - `<digests>` has the same meaning as in `subject`.
+materials:
+  # The following resource type names are conventional.
 
-  # The Github Actions used in the workflow.
-  'git+https://github.com/actions/checkout#tag=v2':
-    git_commit: 5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-  'git+https://github.com/actions/upload-artifact#tag=v2':
-    git_commit: e448a9b857ee2131e752b06002bf0e093c65e571
+  # The set of independent input artifacts that were not referenced by any other
+  # artifact. This is usually a single artifact containing the recipe and source
+  # code.
+  source:
+    'git+https://github.com/curl/curl#tag=curl-7_72_0':
+      git_commit: 9d954e49bce3706a9a2efb119ecd05767f0f2a9e
 
-  # Apt packages installed by the workflow.
-  # TODO: should we use shorter URNs?
-  'https://deb.debian.org/debian/pool/main/s/stunnel4/stunnel4_5.50-3_amd64.deb':
-    sha256: e1731ae217fcbc64d4c00d707dcead45c828c5f762bcf8cc56d87de511e096fa
-  'https://deb.debian.org/debian/pool/main/i/impacket/python-impacket_0.9.15-5_all.deb':
-    sha256: 71fa2e67376c8bc03429e154628ddd7b196ccf9e79dec7319f9c3a312fd76469
-  'apt:debian-main:libzstd-dev':
-    sha256: ...
-  'debian-apt:libbrotli-dev':
-    sha256: ...
-  # plus all their dependencies
+  # The base VM or container image that the builder ran the build steps on.
+  builder_base_image:
+    'github_hosted_vm:ubuntu-18.04:20210123.1':
+      # No digests available.
 
-# If true, `dependencies` is guaranteed to be complete, usually through some
-# controls to prevent network access.
-#
-# For Github Actions, this is always false today, but we hope that eventually
-# such a feature gets built.
-dependencies_complete: false
+  # Dependencies that are not "distributed" with the software. If it is not
+  # possible to determine this, use `generic`.
+  # TODO: Check if this definition is good enough for both licensing and
+  # vulnerability purposes.
+  # TODO: Can we guarantee that all github actions really meet this definition?
+  build_tools:
+    # The GitHub Actions used in the workflow.
+    # TODO: Is it worth splitting out these into a separate resource type?
+    'git+https://github.com/actions/checkout#tag=v2':
+      git_commit: 5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+    'git+https://github.com/actions/upload-artifact#tag=v2':
+      git_commit: e448a9b857ee2131e752b06002bf0e093c65e571
 
-# The timestamp of when the build occurred. This is often very useful for
-# debugging.
-build_timestamp: '2020-08-19T08:38:00Z'
+  # Dependencies that are "distributed" with the software. If it is not possible
+  # to determine this, use `genreic.
+  libraries:
+    # None.
+
+  # Any other dependencies whose relation to `subject` is unspecified.
+  generic:
+    # Apt packages installed by the workflow.
+    # TODO: should we use shorter URNs?
+    'https://deb.debian.org/debian/pool/main/s/stunnel4/stunnel4_5.50-3_amd64.deb':
+      sha256: e1731ae217fcbc64d4c00d707dcead45c828c5f762bcf8cc56d87de511e096fa
+    'https://deb.debian.org/debian/pool/main/i/impacket/python-impacket_0.9.15-5_all.deb':
+      sha256: 71fa2e67376c8bc03429e154628ddd7b196ccf9e79dec7319f9c3a312fd76469
+    'apt:debian-main:libzstd-dev':
+      sha256: ...
+    'debian-apt:libbrotli-dev':
+      sha256: ...
+    # plus all their dependencies
 
 # Other information that is needed to reproduce the build but that cannot be
 # controlled by users.
-reproducibility_info:
+reproducibility:
+  # --- Standard fields ---
+
   # The architecture and operating system that the builder ran on.
   # https://github.com/golang/go/blob/master/src/go/build/syslist.go
   arch: amd64           # GOARCH
   os: linux             # GOOS
 
-  # Github-specific fields:
+  # --- Fields dependent on `recipe.type` ---
+
   context:
     # TODO: Should we record any other context fields that affected the build?
     # https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions
 
-# Extra information about the build. Schema depends entirely on subtype.
-# TODO: Explain that this information was derived from the sources but is
-# included here for debugging purposes.
-extra:
+# Properties of the build.
+metadata:
+  # The timestamp of when the build occurred. This is often very useful for
+  # debugging.
+  build_timestamp: '2020-08-19T08:38:00Z'
+
+  # If true, `materials` is guaranteed to be complete, usually through some
+  # controls to prevent network access.
+  #
+  # For GitHub Actions, this is always false today, but we hope that eventually
+  # such a feature gets built.
+  materials_complete: false

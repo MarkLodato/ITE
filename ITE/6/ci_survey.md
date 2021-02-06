@@ -21,9 +21,9 @@ Lists:
 
 *   [Cirrus CI](https://cirrus-ci.org/guide/quick-start/)
 
-*   [Github Actions](https://docs.github.com/en/actions)
+*   [GitHub Actions](https://docs.github.com/en/actions)
 
-    *   source: git repo on Github
+    *   source: git repo on GitHub
     *   builder:
         *   orchestrator: hosted
         *   worker: hosted or custom (called a "runner")
@@ -37,7 +37,7 @@ Lists:
 
 *   [GitLab CI/CD](https://docs.gitlab.com/ee/ci/)
 
-    *   source: git repo on GitLab or Github
+    *   source: git repo on GitLab or GitHub
     *   builder:
         *   orchestrator: hosted
         *   worker: custom (called a "runner")
@@ -48,7 +48,7 @@ Lists:
 
 *   [Google Cloud Build](https://cloud.google.com/cloud-build/docs) - Triggers
 
-    *   source: git repo on Github or Google Source Repositories
+    *   source: git repo on GitHub or Google Source Repositories
     *   [source](https://cloud.google.com/cloud-build/docs/api/reference/rest/v1/projects.builds#source):
         *   tarball on Google Cloud Storage
         *   git repo on Google Source Repository or GitHub
