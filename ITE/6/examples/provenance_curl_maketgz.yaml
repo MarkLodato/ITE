@@ -61,15 +61,25 @@ recipe:
   # The following value means that the recipe is a GitHub Actions Workflow.
   type: git+https://github.com/actions/attestations@v1#recipe
 
+  # The artifact in `materials` containing the recipe steps that are not implied
+  # by `type`. For example, if the recipe type were "make", then this would
+  # point to the Makefile, not the `make` program itself.
+  #
+  # Omit this field (or use null) if the recipe doesn't come from a material.
+  #
+  # TODO: What if there is more than one material?
+  #
+  # For GitHub Actions Workflow, it is the git repository containing the
+  # `.github/workflows/$WORKFLOW` file.
+  material: git+https://github.com/curl/curl@curl-7_72_0
+
   # String identifying the entry point. The meaning is defined by `type`.
   #
-  # For GitHub Actions Workflow, it is "<workflow>:<job>", where:
-  # - `<workflow>` is the filename within `.github/workflows/` in the top-level
-  #   `materials.source`, which must list a single git repository.
-  # - `<job>` is the job ID within the workflow definition.
+  # For GitHub Actions Workflow, it is "$WORKFLOW:$JOB".
   entry_point: build.yaml:maketgz
 
-  # Set of input arguments that influenced the build on top of `entry_point`.
+  # Set of input arguments that influenced the build on top of `material` and
+  # `entry_point`.
   # It is an object whose schema is defined by `type`, or may be null or
   # undefined to indicate "no arguments."
   #
@@ -77,59 +87,43 @@ recipe:
   # (TODO: any others?)
   arguments: null
 
-# The set of input artifacts that influenced the build. It is an object of the
-# form `materials: { <resource_type>: { <resource_uri>: { <digests> } } }`,
-# where:
-# - `<resource_type>` is a string indicating how this resource was used, as
-#   defined by `recipe.type`.
-# - `<resource_uri>` is a URI identifying the resource. Usually this is the
-#   location from which the resource was fetched.
-# - `<digests>` has the same meaning as in `subject`.
+# The set of input artifacts that influenced the build. The type is the same as
+# `subject`, but use of path-noscheme keys is DISCOURAGED.
+#
+# TODO: Perhaps this field should be standard in all Attestations.
+# TODO: Should we add a way to add additional information, such as which was the
+#       VM base image or how it should be considered w.r.t. licensing?
+#       If so, we may want to add more structure. Then again, we could always do
+#       that in a future version if needed.
+# TODO: Should we make this an array so that it is easier to reference from
+#       other fields?
 materials:
-  # The following resource type names are conventional.
-
   # The set of independent input artifacts that were not referenced by any other
   # artifact. This is usually a single artifact containing the recipe and source
   # code.
-  source:
-    'git+https://github.com/curl/curl@curl-7_72_0':
-      git_commit: 9d954e49bce3706a9a2efb119ecd05767f0f2a9e
+  'git+https://github.com/curl/curl@curl-7_72_0':
+    git_commit: 9d954e49bce3706a9a2efb119ecd05767f0f2a9e
 
   # The base VM or container image that the builder ran the build steps on.
-  builder_base_image:
-    'github_hosted_vm:ubuntu-18.04:20210123.1':
-      # No digests available.
+  'github_hosted_vm:ubuntu-18.04:20210123.1':
+    # No digests available.
 
-  # Dependencies that are not "distributed" with the software. If it is not
-  # possible to determine this, use `generic`.
-  # TODO: Check if this definition is good enough for both licensing and
-  # vulnerability purposes.
-  # TODO: Can we guarantee that all github actions really meet this definition?
-  build_tools:
-    # The GitHub Actions used in the workflow.
-    # TODO: Is it worth splitting out these into a separate resource type?
-    'git+https://github.com/actions/checkout@v2':
-      git_commit: 5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-    'git+https://github.com/actions/upload-artifact@v2':
-      git_commit: e448a9b857ee2131e752b06002bf0e093c65e571
+  # GitHub Actions.
+  'git+https://github.com/actions/checkout@v2':
+    git_commit: 5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+  'git+https://github.com/actions/upload-artifact@v2':
+    git_commit: e448a9b857ee2131e752b06002bf0e093c65e571
 
-  # Dependencies that are "distributed" with the software. If it is not possible
-  # to determine this, use `genreic.
-  libraries:
-    # None.
-
-  # Any other dependencies whose relation to `subject` is unspecified.
-  generic:
-    # Apt packages installed by the workflow.
-    'pkg:deb/debian/stunnel4@5.50-3?arch=amd64':
-      sha256: e1731ae217fcbc64d4c00d707dcead45c828c5f762bcf8cc56d87de511e096fa
-    'pkg:deb/debian/python-impacket@0.9.15-5?arch=all':
-      sha256: 71fa2e67376c8bc03429e154628ddd7b196ccf9e79dec7319f9c3a312fd76469
-    'pkg:deb/debian/libzstd-dev@1.3.8+dfsg-3?arch=amd64':
-      sha256: 91442b0ae04afc25ab96426761bbdf04b0e3eb286fdfbddb1e704444cb12a625
-    'pkg:deb/debian/libbrotli-dev@1.0.7-2+deb10u1?arch=amd64':
-      sha256: 05b6e467173c451b6211945de47ac0eda2a3dccb3cc7203e800c633f74de8b4f
-    # plus all their dependencies
+  # Apt packages installed by the workflow.
+  'pkg:deb/debian/stunnel4@5.50-3?arch=amd64':
+    sha256: e1731ae217fcbc64d4c00d707dcead45c828c5f762bcf8cc56d87de511e096fa
+  'pkg:deb/debian/python-impacket@0.9.15-5?arch=all':
+    sha256: 71fa2e67376c8bc03429e154628ddd7b196ccf9e79dec7319f9c3a312fd76469
+  'pkg:deb/debian/libzstd-dev@1.3.8+dfsg-3?arch=amd64':
+    sha256: 91442b0ae04afc25ab96426761bbdf04b0e3eb286fdfbddb1e704444cb12a625
+  'pkg:deb/debian/libbrotli-dev@1.0.7-2+deb10u1?arch=amd64':
+    sha256: 05b6e467173c451b6211945de47ac0eda2a3dccb3cc7203e800c633f74de8b4f
+  # plus all their dependencies
 
 # Other information that is needed to reproduce the build but that cannot be
 # controlled by users.
