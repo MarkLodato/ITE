@@ -139,7 +139,6 @@ reproducibility:
   # The architecture and operating system that the builder ran on.
   # https://github.com/golang/go/blob/master/src/go/build/syslist.go
   arch: amd64           # GOARCH
-  os: linux             # GOOS
 
   # --- Fields dependent on `recipe.type` ---
 
