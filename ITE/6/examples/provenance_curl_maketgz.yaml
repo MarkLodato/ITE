@@ -42,8 +42,10 @@ builder:
 
   # The rest of the fields are specific to `id`.
 
-  # String identifying what system ran the actual build actions. It is either
-  # "github-hosted" or some TBD identifier for a self-hosted runner.
+  # String identifying what system ran the actual build actions.
+  # - For GitHub hosted runners, the value is "github-hosted".
+  # - For self-hosted runners, the value is TBD to indicate which specific
+  #   runner was used.
   runner: github-hosted
 
 # Describes the actions that the builder performed.
