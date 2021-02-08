@@ -14,10 +14,14 @@ attester: GitHubActions
 # Provenance explains the process that produced the subject.
 type: https://in-toto.io/Provenance/v1
 
-# The collection of artifacts that this attestation is about. The key is an
-# identifier for the artifact and the value is a set of digests. If there is a
-# single artifact and the name is not meaningful, use "_" as the key. Otherwise
-# verifiers MUST match the name as part of the policy.
+# The collection of artifacts that this attestation is about.
+#
+# - Key: URI or path-noscheme (RFC 3986) identifying the artifact. If there is a
+#   single artifact and the name is not meaningful, use "_" as the key.
+#   Otherwise verifiers MUST match the name as part of the policy. For URIs,
+#   Package URL (once finalized) or SPDX Download Location (e.g. git+https) is
+#   RECOMMENDED.
+# - Value: Set of cryptographic content digests.
 #
 # For provenance, it is the products of the build process.
 subject:
@@ -38,7 +42,7 @@ builder:
   # URI indicating the builder's identity as well as the schema of this object.
   #
   # The following value means that the build was executed by GitHub Actions.
-  id: https://github.com/actions/attestations/tree/v1/builder
+  id: git+https://github.com/actions/attestations@v1#builder
 
   # The rest of the fields are specific to `id`.
 
@@ -55,7 +59,7 @@ recipe:
   # `reproducibility`.
   #
   # The following value means that the recipe is a GitHub Actions Workflow.
-  type: https://github.com/actions/attestations/tree/v1/recipe
+  type: git+https://github.com/actions/attestations@v1#recipe
 
   # String identifying the entry point. The meaning is defined by `type`.
   #
@@ -88,7 +92,7 @@ materials:
   # artifact. This is usually a single artifact containing the recipe and source
   # code.
   source:
-    'git+https://github.com/curl/curl#tag=curl-7_72_0':
+    'git+https://github.com/curl/curl@curl-7_72_0':
       git_commit: 9d954e49bce3706a9a2efb119ecd05767f0f2a9e
 
   # The base VM or container image that the builder ran the build steps on.
@@ -104,9 +108,9 @@ materials:
   build_tools:
     # The GitHub Actions used in the workflow.
     # TODO: Is it worth splitting out these into a separate resource type?
-    'git+https://github.com/actions/checkout#tag=v2':
+    'git+https://github.com/actions/checkout@v2':
       git_commit: 5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-    'git+https://github.com/actions/upload-artifact#tag=v2':
+    'git+https://github.com/actions/upload-artifact@v2':
       git_commit: e448a9b857ee2131e752b06002bf0e093c65e571
 
   # Dependencies that are "distributed" with the software. If it is not possible
@@ -117,15 +121,14 @@ materials:
   # Any other dependencies whose relation to `subject` is unspecified.
   generic:
     # Apt packages installed by the workflow.
-    # TODO: should we use shorter URNs?
-    'https://deb.debian.org/debian/pool/main/s/stunnel4/stunnel4_5.50-3_amd64.deb':
+    'pkg:deb/debian/stunnel4@5.50-3?arch=amd64':
       sha256: e1731ae217fcbc64d4c00d707dcead45c828c5f762bcf8cc56d87de511e096fa
-    'https://deb.debian.org/debian/pool/main/i/impacket/python-impacket_0.9.15-5_all.deb':
+    'pkg:deb/debian/python-impacket@0.9.15-5?arch=all':
       sha256: 71fa2e67376c8bc03429e154628ddd7b196ccf9e79dec7319f9c3a312fd76469
-    'apt:debian-main:libzstd-dev':
-      sha256: ...
-    'debian-apt:libbrotli-dev':
-      sha256: ...
+    'pkg:deb/debian/libzstd-dev@1.3.8+dfsg-3?arch=amd64':
+      sha256: 91442b0ae04afc25ab96426761bbdf04b0e3eb286fdfbddb1e704444cb12a625
+    'pkg:deb/debian/libbrotli-dev@1.0.7-2+deb10u1?arch=amd64':
+      sha256: 05b6e467173c451b6211945de47ac0eda2a3dccb3cc7203e800c633f74de8b4f
     # plus all their dependencies
 
 # Other information that is needed to reproduce the build but that cannot be
