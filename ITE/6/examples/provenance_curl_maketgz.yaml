@@ -18,12 +18,12 @@ type: https://in-toto.io/Provenance/v1
 #
 # - Key: URI or path-noscheme (RFC 3986) identifying the artifact. If there is a
 #   single artifact and the name is not meaningful, use "_" as the key.
-#   Otherwise verifiers MUST match the name as part of the policy. For URIs,
-#   Package URL (once finalized) or SPDX Download Location (e.g. git+https) is
-#   RECOMMENDED.
+#   Verifiers MUST consider the key as security relevant. For URIs, Package URL
+#   (once finalized) or SPDX Download Location (e.g. git+https) is RECOMMENDED.
+#
 # - Value: Set of cryptographic content digests.
 #
-# For provenance, it is the products of the build process.
+# For provenance, this is the products of the build process.
 subject:
   'curl-7.72.0.tar.bz2':
     sha256: ad91970864102a59765e20ce16216efc9d6ad381471f7accceceab7d905703ef
