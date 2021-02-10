@@ -97,6 +97,8 @@ recipe:
 #       that in a future version if needed.
 # TODO: Should we make this an array so that it is easier to reference from
 #       other fields?
+# TODO: What if there are multiple versions of the same resource ID? For
+#       example, fetch the same HTTP file twice and get two different artifacts?
 materials:
   # The set of independent input artifacts that were not referenced by any other
   # artifact. This is usually a single artifact containing the recipe and source
