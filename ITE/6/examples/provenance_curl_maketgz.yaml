@@ -34,6 +34,48 @@ subject:
   'curl-7.72.0.zip':
     sha256: e363cc5b4e500bfc727106434a2578b38440aa18e105d57576f3d8f2abebf888
 
+# The set of input artifacts that influenced the attestation. The type is the
+# same as `subject`, but use of path-noscheme keys is DISCOURAGED.
+#
+# For provenance, this should cover all artifacts that influenced the build,
+# including sources, dependencies, build tools, base images, and so on.
+#
+# TODO: Should we add a way to add additional information, such as which was the
+#       VM base image or how it should be considered w.r.t. licensing?
+#       If so, we may want to add more structure. Then again, we could always do
+#       that in a future version if needed.
+# TODO: Should we make this an array so that it is easier to reference from
+#       other fields?
+# TODO: What if there are multiple versions of the same resource ID? For
+#       example, fetch the same HTTP file twice and get two different artifacts?
+materials:
+  # The set of independent input artifacts that were not referenced by any other
+  # artifact. This is usually a single artifact containing the recipe and source
+  # code.
+  'git+https://github.com/curl/curl@curl-7_72_0':
+    git_commit: 9d954e49bce3706a9a2efb119ecd05767f0f2a9e
+
+  # The base VM or container image that the builder ran the build steps on.
+  'github_hosted_vm:ubuntu-18.04:20210123.1':
+    # No digests available.
+
+  # GitHub Actions.
+  'git+https://github.com/actions/checkout@v2':
+    git_commit: 5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+  'git+https://github.com/actions/upload-artifact@v2':
+    git_commit: e448a9b857ee2131e752b06002bf0e093c65e571
+
+  # Apt packages installed by the workflow.
+  'pkg:deb/debian/stunnel4@5.50-3?arch=amd64':
+    sha256: e1731ae217fcbc64d4c00d707dcead45c828c5f762bcf8cc56d87de511e096fa
+  'pkg:deb/debian/python-impacket@0.9.15-5?arch=all':
+    sha256: 71fa2e67376c8bc03429e154628ddd7b196ccf9e79dec7319f9c3a312fd76469
+  'pkg:deb/debian/libzstd-dev@1.3.8+dfsg-3?arch=amd64':
+    sha256: 91442b0ae04afc25ab96426761bbdf04b0e3eb286fdfbddb1e704444cb12a625
+  'pkg:deb/debian/libbrotli-dev@1.0.7-2+deb10u1?arch=amd64':
+    sha256: 05b6e467173c451b6211945de47ac0eda2a3dccb3cc7203e800c633f74de8b4f
+  # plus all their dependencies
+
 # --- Fields specific to provenance type ---
 
 # Idenfifies the entity that executed the build steps.
@@ -86,46 +128,6 @@ recipe:
   # For GitHub Actions Workflow, it is the workflow_dispatch inputs.
   # (TODO: any others?)
   arguments: null
-
-# The set of input artifacts that influenced the build. The type is the same as
-# `subject`, but use of path-noscheme keys is DISCOURAGED.
-#
-# TODO: Perhaps this field should be standard in all Attestations.
-# TODO: Should we add a way to add additional information, such as which was the
-#       VM base image or how it should be considered w.r.t. licensing?
-#       If so, we may want to add more structure. Then again, we could always do
-#       that in a future version if needed.
-# TODO: Should we make this an array so that it is easier to reference from
-#       other fields?
-# TODO: What if there are multiple versions of the same resource ID? For
-#       example, fetch the same HTTP file twice and get two different artifacts?
-materials:
-  # The set of independent input artifacts that were not referenced by any other
-  # artifact. This is usually a single artifact containing the recipe and source
-  # code.
-  'git+https://github.com/curl/curl@curl-7_72_0':
-    git_commit: 9d954e49bce3706a9a2efb119ecd05767f0f2a9e
-
-  # The base VM or container image that the builder ran the build steps on.
-  'github_hosted_vm:ubuntu-18.04:20210123.1':
-    # No digests available.
-
-  # GitHub Actions.
-  'git+https://github.com/actions/checkout@v2':
-    git_commit: 5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-  'git+https://github.com/actions/upload-artifact@v2':
-    git_commit: e448a9b857ee2131e752b06002bf0e093c65e571
-
-  # Apt packages installed by the workflow.
-  'pkg:deb/debian/stunnel4@5.50-3?arch=amd64':
-    sha256: e1731ae217fcbc64d4c00d707dcead45c828c5f762bcf8cc56d87de511e096fa
-  'pkg:deb/debian/python-impacket@0.9.15-5?arch=all':
-    sha256: 71fa2e67376c8bc03429e154628ddd7b196ccf9e79dec7319f9c3a312fd76469
-  'pkg:deb/debian/libzstd-dev@1.3.8+dfsg-3?arch=amd64':
-    sha256: 91442b0ae04afc25ab96426761bbdf04b0e3eb286fdfbddb1e704444cb12a625
-  'pkg:deb/debian/libbrotli-dev@1.0.7-2+deb10u1?arch=amd64':
-    sha256: 05b6e467173c451b6211945de47ac0eda2a3dccb3cc7203e800c633f74de8b4f
-  # plus all their dependencies
 
 # Other information that is needed to reproduce the build but that cannot be
 # controlled by users.

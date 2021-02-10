@@ -16,15 +16,6 @@ subject:
   'curl-7.72.0.zip':
     sha256: e363cc5b4e500bfc727106434a2578b38440aa18e105d57576f3d8f2abebf888
 
-builder:
-  id: https://github.com/Attestations/GitHubHostedActions@v1
-
-recipe:
-  type: https://github.com/Attestations/GitHubActionsWorkflow@v1
-  material: git+https://github.com/curl/curl@curl-7_72_0
-  entry_point: build.yaml:maketgz
-  arguments: null
-
 materials:
   'git+https://github.com/curl/curl@curl-7_72_0':
     git_commit: 9d954e49bce3706a9a2efb119ecd05767f0f2a9e
@@ -42,6 +33,15 @@ materials:
     sha256: 91442b0ae04afc25ab96426761bbdf04b0e3eb286fdfbddb1e704444cb12a625
   'pkg:deb/debian/libbrotli-dev@1.0.7-2+deb10u1?arch=amd64':
     sha256: 05b6e467173c451b6211945de47ac0eda2a3dccb3cc7203e800c633f74de8b4f
+
+builder:
+  id: https://github.com/Attestations/GitHubHostedActions@v1
+
+recipe:
+  type: https://github.com/Attestations/GitHubActionsWorkflow@v1
+  material: git+https://github.com/curl/curl@curl-7_72_0
+  entry_point: build.yaml:maketgz
+  arguments: null
 
 metadata:
   build_timestamp: '2020-08-19T08:38:00Z'
