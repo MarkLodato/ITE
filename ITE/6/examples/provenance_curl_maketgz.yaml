@@ -1,8 +1,8 @@
 --- # Metadata
 
 # The entity that made the attestation. It is not a real field. Verifiers are
-# expected to map verification keys attester IDs.
-attester: GitHubActions
+# expected to map verification keys to signer IDs.
+signer: GitHubActions
 
 --- # Payload
 
@@ -36,21 +36,21 @@ subject:
 
 # --- Fields specific to provenance type ---
 
-# Idenfifies the entity that executed the build steps. In many cases, the
-# builder is different from the attester.
+# Idenfifies the entity that executed the build steps.
+#
+# This is distinct from `signer` because one signer may map to more than one
+# builder. For example, a signle GitHubActions signer may produce attestations
+# for both "github-hosted runner" and "self-hosted runner" builders, each with
+# distinct IDs.
+#
+# Verifiers MUST only accept specific builders from specific signers.
 builder:
-  # URI indicating the builder's identity as well as the schema of this object.
+  # URI indicating the builder's identity.
   #
-  # The following value means that the build was executed by GitHub Actions.
-  id: git+https://github.com/actions/attestations@v1#builder
-
-  # The rest of the fields are specific to `id`.
-
-  # String identifying what system ran the actual build actions.
-  # - For GitHub hosted runners, the value is "github-hosted".
-  # - For self-hosted runners, the value is TBD to indicate which specific
-  #   runner was used.
-  runner: github-hosted
+  # The following value means that the build was executed by GitHub Actions on a
+  # GitHub Hosted Runner. Self-hosted runners would have a different ID, though
+  # details are still TBD.
+  id: https://github.com/Attestations/GitHubHostedActions@v1
 
 # Describes the actions that the builder performed.
 recipe:
@@ -59,7 +59,7 @@ recipe:
   # `reproducibility`.
   #
   # The following value means that the recipe is a GitHub Actions Workflow.
-  type: git+https://github.com/actions/attestations@v1#recipe
+  type: https://github.com/Attestations/GitHubActionsWorkflow@v1
 
   # The artifact in `materials` containing the recipe steps that are not implied
   # by `type`. For example, if the recipe type were "make", then this would
