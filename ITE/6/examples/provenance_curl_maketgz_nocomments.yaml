@@ -4,7 +4,7 @@ attester: GitHubActions
 
 --- # Payload
 
-type: https://in-toto.io/Provenance/v1
+attestation_type: https://in-toto.io/Provenance/v1
 
 subject:
   'curl-7.72.0.tar.bz2':

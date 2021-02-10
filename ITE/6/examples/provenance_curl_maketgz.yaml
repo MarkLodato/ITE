@@ -12,7 +12,7 @@ signer: GitHubActions
 # payload. Only a small set of well-defined types are expected.
 #
 # Provenance explains the process that produced the subject.
-type: https://in-toto.io/Provenance/v1
+attestation_type: https://in-toto.io/Provenance/v1
 
 # The collection of artifacts that this attestation is about.
 #
