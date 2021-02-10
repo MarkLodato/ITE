@@ -10,9 +10,9 @@ Date: September 2020
 # Abstract
 
 This ITE defines a new schema for in-toto link files, which are now generally
-called “attestations.” An attestation has three distinct layers, mapping to the
+called "attestations." An attestation has three distinct layers, mapping to the
 three distinct steps in verification. The innermost layer is user-defined to
-allow customers to define their own schemas; “link” is now one such user-defined
+allow customers to define their own schemas; "link" is now one such user-defined
 schema.
 
 This specification is developed jointly with
@@ -27,23 +27,23 @@ be usable by either system.
 An **attestation** is the generalization of an in-toto link. It is a statement
 about an artifact, signed by an attester. Each attestation has a type indicating
 what the statement means, plus type-dependent details. In this new model, a
-“link” is just one type of attestation, but others are possible.
+"link" is just one type of attestation, but others are possible.
 
 Examples of attestations:
 
 *   Provenance: GitHub Actions attests to the fact that it built a container
-    image with digest “sha256:87f7fe…” from git commit “f0c93d…” in the “master”
-    branch of “https://github.com/example/foo”.
+    image with digest "sha256:87f7fe…" from git commit "f0c93d…" in the "master"
+    branch of "https://github.com/example/foo".
 *   Code review: GitHub attests to the fact that Alice uploaded and Bob approved
-    git commit “f0c93d…” in the “master” branch of
-    “https://github.com/example/foo”.
+    git commit "f0c93d…" in the "master" branch of
+    "https://github.com/example/foo".
 *   Test result: Google Container Analysis attests to the fact that no
-    vulnerabilities were found in container image “sha256:87f7fe…” at a
+    vulnerabilities were found in container image "sha256:87f7fe…" at a
     particular time.
 *   Policy decision: Binary Authorization attests to the fact that container
-    image “sha256:87f7fe…” is allowed to run under GKE project “example-project”
+    image "sha256:87f7fe…" is allowed to run under GKE project "example-project"
     within the next 4 hours, and that it used the three attestations above and
-    as well as the policy with sha256 hash “79e572”.
+    as well as the policy with sha256 hash "79e572".
 
 ## Model and Terminology
 
@@ -69,9 +69,9 @@ The binding and details together are called the **claim**.
 [ITE-5](https://github.com/MarkLodato/ITE/blob/ite-5/ITE/5/README.md) defines a
 new, generic authentication layer. Attestations always use one of:
 
-*   payloadType “https://in-toto.io/Attestation/v1-json” with a JSON-encoded
+*   payloadType "https://in-toto.io/Attestation/v1-json" with a JSON-encoded
     payload.
-*   payloadType “https://in-toto.io/Attestation/v1-cbor” with a CBOR-encoded
+*   payloadType "https://in-toto.io/Attestation/v1-cbor" with a CBOR-encoded
     payload.
 
 The schema for the payload is described in
@@ -79,7 +79,7 @@ The schema for the payload is described in
 
 Prior to ITE-5, the existing in-toto signature wrapper may be used. In this
 case, the payload is always JSON with a `_type` of
-“https://in-toto.io/Attestation/v1”.
+"https://in-toto.io/Attestation/v1".
 
 ## Claim schema (binding layer)
 
@@ -157,16 +157,16 @@ the following fields. See subsequent sections for
 > >
 > > *   `top_level_source`: The primary input used to generate this attestation
 > >     or subject, each of which is independent. Usually length one. In the
-> >     example, the “dsc” file is the top-level source because it fully
+> >     example, the "dsc" file is the top-level source because it fully
 > >     specifies the build.
 > > *   `dependent_sources`: Additional inputs used to generate this attestation
 > >     or subject, referenced by at least one `top_level_source`. In the
-> >     example, the two “tar.bz2” files are dependent because they are listed
-> >     in the “dsc” file.
+> >     example, the two "tar.bz2" files are dependent because they are listed
+> >     in the "dsc" file.
 > > *   `tools`: Build tools, compilers, or other dependencies that would not be
-> >     considered “source”.
+> >     considered "source".
 > > *   `environment`: Artifacts in the operating system that can influence the
-> >     build but that don’t meet the definitions above.
+> >     build but that don't meet the definitions above.
 > > *   `other_products`: Other artifacts that were produced as part of the same
 > >     build.
 >
@@ -174,7 +174,7 @@ the following fields. See subsequent sections for
 >
 > 1.  Map&lt;string, Set&lt;ArtifactReference>>, where ArtifactReference can
 >     contain arbitrary metadata, not just immutable IDs. May need something to
->     avoid clashes between standard fields (e.g. “sha256”) and custom ones.
+>     avoid clashes between standard fields (e.g. "sha256") and custom ones.
 >     Pro: simpler to describe. Con: possibly more error prone.
 > 2.  Map&lt;string, Map&lt;string, ArtifactReference>>, where the outer map is
 >     the same and the inner map is `attestation_type`-dependent, usually
@@ -203,7 +203,7 @@ The following are only needed for backwards compatibility:
 `_type` _(URI, optional)_
 
 > Indicates that this message is an attestation, with the exact value
-> “https://in-toto.io/Attestation/v1.” Only needed prior to
+> "https://in-toto.io/Attestation/v1." Only needed prior to
 > [ITE-5](https://github.com/in-toto/ITE/pull/13). If this field is set,
 > verifiers **must** reject the attestation if the value differs.
 
@@ -254,7 +254,7 @@ _URI_
 > 6.2.2.1 of RFC 3986, meaning that the scheme and host must be in lowercase.
 > Needs not be resolvable; if it is, the result **should** be a human-readable
 > description of the schema. **Should** include a version number to allow for
-> revisions to the schema. Example: “https://in-toto.io/Attestation/v1”.
+> revisions to the schema. Example: "https://in-toto.io/Attestation/v1".
 
 _ArtifactReference_
 
@@ -263,7 +263,7 @@ _ArtifactReference_
 > the type of the identifier. An artifact matches the reference if _any_ of its
 > identifiers match. Example: `{"sha256": "abcd…", "sha512": "1234…"}` means an
 > artifact whose content hash is either SHA-256 `abcd…` or SHA-512 `1234…`.
-> Previously called a “hash object.”
+> Previously called a "hash object."
 >
 > A set of [well-known types](#well-known-artifact-reference-types) cover the
 > most common content hashes. All well-known types have a key in snake\_case
@@ -272,8 +272,8 @@ _ArtifactReference_
 >
 > Custom types may be used to either define custom artifact IDs or custom
 > semantics. For example, this may be used to support permalinks to an
-> organization’s centralized version control system. Another example is to
-> define “and” semantics, where all IDs must match. All custom-type keys
+> organization's centralized version control system. Another example is to
+> define "and" semantics, where all IDs must match. All custom-type keys
 > **must** start with an underscore or be a _URI_ (thus containing a colon). The
 > value can be any type, such as an array or object. The key is case sensitive.
 
@@ -302,17 +302,17 @@ hashes? Ideas:
     *   Example: `"cpe:2.3:a:gnu:gcc:2.95.1:…"`
     *   Pro: Could be useful for recording
         [CVE Entries](https://en.wikipedia.org/wiki/Common_Vulnerabilities_and_Exposures).
-    *   Pro: Could be useful as a “source” in a provenance attestation (i.e. not
+    *   Pro: Could be useful as a "source" in a provenance attestation (i.e. not
         subject).
     *   Con: Goes against monotonicity principle. Instead, we recommend an
-        attestation saying “zero CVEs”.
+        attestation saying "zero CVEs".
     *   Con: Goes against our idea for binding attestations to particular
         artifacts. This, on the other hand, is more of a matcher.
 *   git\_repo (git URL and optionally branch)
     *   Example: `"{ url: "https://github.com/curl/curl", branch: "master" }`
     *   Pro: Could be used to, for example, say that a particular repo was
         configured in a certain way, e.g. had code review enabled.
-    *   Pro: Could be useful as a “source” in a provenance attestation (i.e. not
+    *   Pro: Could be useful as a "source" in a provenance attestation (i.e. not
         subject).
     *   Con: Not an immutable reference to a software artifact.
 
@@ -322,20 +322,20 @@ Attestations **should** be designed to encourage policies to be "monotonic,"
 meaning that deleting an attestation will never turn a DENY decision into an
 ALLOW. One reason for this is because verifiers must ignore unrecognized
 subjects; if no subject is recognized, the attestation is effectively deleted.
-Example: instead of “deny if a ‘has vulnerabilities’ attestation exists”, prefer
-“deny unless a ‘no vulnerabilities’ attestation exists”.
+Example: instead of "deny if a 'has vulnerabilities' attestation exists", prefer
+"deny unless a 'no vulnerabilities' attestation exists".
 
 Attestation designers are free to limit what subject types are valid for a given
-attestation type. For example, suppose a “Gerrit code review” attestation only
-applies to “git\_commit” subjects. In that case, a producer of such attestations
-should never use a subject other than “git\_commit.”
+attestation type. For example, suppose a "Gerrit code review" attestation only
+applies to "git\_commit" subjects. In that case, a producer of such attestations
+should never use a subject other than "git\_commit."
 
 # Examples
 
 ## Link-type attestation
 
 Links can be mechanically translated to the new format, without a `subject`.
-This doesn’t take advantage of the new features, but it does provide backwards
+This doesn't take advantage of the new features, but it does provide backwards
 compatibility with existing layouts.
 
 ```json
@@ -404,12 +404,12 @@ Kubernetes environments:
 
 *   All containers must undergo a source-level vulnerability scan showing zero
     known high severity vulnerabilities.
-*   All first-party code must be peer reviewed, reside in MyCompany’s GitHub
+*   All first-party code must be peer reviewed, reside in MyCompany's GitHub
     org, and be sufficiently recent.
 *   All third-party code and build tools must be verified via Reproducible
-    Builds. (Let’s pretend such an attestation service exists.)
+    Builds. (Let's pretend such an attestation service exists.)
 *   All build steps must be performed by GitHub Actions, Google Cloud Build, or
-    AWS CodeBuild in (a hypothetical) “hermetic” mode.
+    AWS CodeBuild in (a hypothetical) "hermetic" mode.
 *   The intermediate products in the supply chain have not been tampered with.
 
 It is both too costly and too insecure to have every team write their own
@@ -430,7 +430,7 @@ application:
     *   There is no support for verifying any details. The closest option,
         `expected_command`, is just a warning but not an error.
     *   There is no support for performing generic traversals of the build
-        graph, such as “allow any number of verifiable build steps.”
+        graph, such as "allow any number of verifiable build steps."
 *   There is no practical way to analyze a layout to determine if it meets the
     requirements above.
 
@@ -514,15 +514,15 @@ allowed_artifact_id_types = [
 
 ## Attestations
 
-Let’s take a look at one example team’s software supply chain.
+Let's take a look at one example team's software supply chain.
 
 ![drawing](attestation_supply_chain.png)
 
-*   Top-level code repository is “https://github.com/my-company/my-product”.
+*   Top-level code repository is "https://github.com/my-company/my-product".
     *   This defines submodules and the GitHub Actions workflows.
 *   Vulnerability scan is provided by an in-house scanner.
-*   Docker image is produced by the GitHub Actions “Build” workflow.
-    *   In the hypothetical “hermetic” mode, this records all dependent
+*   Docker image is produced by the GitHub Actions "Build" workflow.
+    *   In the hypothetical "hermetic" mode, this records all dependent
         submodules and build tools.
 
 This corresponds to the following attestations. Assume each is signed by the
@@ -682,7 +682,7 @@ This ITE has two main goals:
 
 1.  Support [use cases](#motivating-use-case) where the existing link schema is
     a poor fit. For example, test steps and vulnerability scans are not about
-    “producing” a new artifact so they are awkward to represent in the current
+    "producing" a new artifact so they are awkward to represent in the current
     format.
 2.  Support interoperability with
     [Binary Authorization](https://cloud.google.com/binary-authorization), which
@@ -707,7 +707,7 @@ Functional requirements:
         must be standardized.
 *   Should allow identification of related artifacts IDs given an attestation,
     without having to understand the user-defined schema.
-    *   Reason: To support “inline attestations,” where the client fetches and
+    *   Reason: To support "inline attestations," where the client fetches and
         sends all required attestations to the server for verification. The
         client does not know the policy ahead of time or understand all
         attestation types.
@@ -725,8 +725,8 @@ Nonfunctional requirements:
 *   Must differentiate between different types of related artifacts (only if
     related artifacts are standardized.) Examples: materials vs products,
     sources vs build tools.
-    *   Should be type-dependent, rather than mandating “materials” and
-        “products.”
+    *   Should be type-dependent, rather than mandating "materials" and
+        "products."
 
 # Reasoning
 
@@ -752,7 +752,7 @@ Nonfunctional requirements:
     *   Because there is no good way, that we have figured out, to support the
         same level of flexibility and readability as we have with JSON/CBOR.
         While it seems reasonable that an application-specific protobuf encoding
-        could be defined, it doesn’t really make sense to define a generic one
+        could be defined, it doesn't really make sense to define a generic one
         because it would be not much more compact than CBOR.
 
 ## Reason for `subject` and `relations` in the binding layer
@@ -762,18 +762,18 @@ the binding layer.
 
 First, doing so allows policy engines to make decisions purely on the binding
 layer without requiring `attestation_type`-specific logic or configuration.
-Binary Authorization policies today are purely about “does an attestation exist
-that is signed by X with subject Y”, and similarly in-toto layouts are about
-“does an attestation exist that is signed by X with relations Z?”[2] These
+Binary Authorization policies today are purely about "does an attestation exist
+that is signed by X with subject Y", and similarly in-toto layouts are about
+"does an attestation exist that is signed by X with relations Z?"[2] These
 relatively simple policies are quite powerful. With this proposal, such policies
-become more expressive without any additional configuration: “does an
+become more expressive without any additional configuration: "does an
 attestation exist that is signed by X having type T, with subject Y and/or
-relations Z?”
+relations Z?"
 
 Second, it enables lookup of attestations by `subject`, again without
 `attestation_type`-specific logic or configuration. Consider the policy
 described in the [motivating use case](#motivating-use-case). There, the
-instruction is “fetch attestations for artifact X”. The lookup could be from a
+instruction is "fetch attestations for artifact X". The lookup could be from a
 set of attestations provided by the caller, or it could be from an external
 database keyed by subject.[3] Without a standardized `subject` field, this would
 be significantly harder.
@@ -783,8 +783,8 @@ Doing so would require users to configure the system for every possible
 `attestation_type` they wanted to support, in order to instruct the system how
 to find subject and relations. Furthermore, because there would be no
 standardization, concepts and models may not necessarily translate between
-attestation types. For example, one attestation type might require an “or”
-between artifact IDs, while another requires an “and.” This difference would add
+attestation types. For example, one attestation type might require an "or"
+between artifact IDs, while another requires an "and." This difference would add
 complexity and confusion.
 
 ## Reason for singular `subject`
@@ -816,7 +816,7 @@ In almost all cases where multiple subjects are desired, it is better to either:
 # Backwards Compatibility
 
 Once the policy engine is updated to support new-style attestations, any
-attestation of type “https://in-toto.io/Link/v1” will be supported by existing
+attestation of type "https://in-toto.io/Link/v1" will be supported by existing
 layouts.
 
 # Security
@@ -840,7 +840,7 @@ to standardize it.
 `timestamp` _(Timestamp, optional)_
 
 > Timestamp as of when this claim was valid. Verifiers **may** use this to
-> compute validity, such as “only accept attestations at most 7 days old.”
+> compute validity, such as "only accept attestations at most 7 days old."
 >
 > Example: the CodeReview attestation says that `details.git_branch` on
 > `details.git_repo` pointed to `subject.git_commit` at `timestamp`.
@@ -858,10 +858,10 @@ to standardize it.
 > attestation if the current timestamp is greater than this value, optionally
 > allowing for a window of clock skew.
 >
-> _Reason for deletion:_ It’s not clear that this is a general feature of an
+> _Reason for deletion:_ It's not clear that this is a general feature of an
 > attestation. Why should attestations be repudiable? If something was true at
 > some time in the past, the fact that it was true at some time in the past
-> doesn’t expire. Thus, the expiration should really be handled in the details
+> doesn't expire. Thus, the expiration should really be handled in the details
 > layer. And as for signature expiration, that should be handled by the
 > authentication layer, not the binding layer.
 
@@ -873,7 +873,7 @@ _Timestamp_
 
 > A point in time. In JSON and CBOR, this is a string in
 > [RFC 3339](https://tools.ietf.org/html/rfc3339) format in the UTC time zone
-> (“Z”). Example: “1985-04-12T23:20:50.52Z”.
+> ("Z"). Example: "1985-04-12T23:20:50.52Z".
 
 # Footnotes
 
@@ -888,5 +888,5 @@ running external commands which is infeasible in many situations.
 content hash. The reason is that such databases quickly run into scaling issues,
 as explained in
 [Building Secure and Reliable Systems](https://static.googleusercontent.com/media/landing.google.com/en//sre/static/pdf/Building_Secure_and_Reliable_Systems.pdf#page=364),
-Chapter 14, page 328, “Ensure Unambiguous Provenance.” Instead, we recommend
+Chapter 14, page 328, "Ensure Unambiguous Provenance." Instead, we recommend
 keying primarily by resource name, in addition to content hash.
