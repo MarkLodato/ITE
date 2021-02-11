@@ -45,172 +45,248 @@ Examples of attestations:
     within the next 4 hours, and that it used the three attestations above and
     as well as the policy with sha256 hash "79e572".
 
-## Model and Terminology
-
-An attestation has three layers, corresponding to the three logic steps in
-verifying an attestation:
-
-*   **Authentication**: Ensures authenticity and integrity of the attestation.
-    Handles:
-    *   Who signed the attestation.
-    *   How to interpret the next layer (serialization).
-*   **Binding**: Ensures that the attestation is relevant for the verification
-    context. Handles:
-    *   What this attestation means, via a type ID.
-    *   What artifacts this attestation is about.
-*   **Details**: Additional data, specified with a type-dependent schema.
-
-The binding and details together are called the **claim**.
-
-![drawing](attestation_parts.png)
+The benefit of this ITE is to express these attestations more natually than was
+possible with the old in-toto link schema.
 
 ## Authentication and serialization
 
-[ITE-5](https://github.com/MarkLodato/ITE/blob/ite-5/ITE/5/README.md) defines a
-new, generic authentication layer. Attestations always use one of:
-
-*   payloadType "https://in-toto.io/Attestation/v1-json" with a JSON-encoded
-    payload.
-*   payloadType "https://in-toto.io/Attestation/v1-cbor" with a CBOR-encoded
-    payload.
-
-The schema for the payload is described in
-[Claim schema (binding layer)](#claim-schema-binding-layer).
+The authentication and serialization is handled by
+[ITE-5](https://github.com/MarkLodato/ITE/blob/ite-5/ITE/5/README.md). The
+payload is always JSON encoded with a `payloadType` of
+`"https://in-toto.io/Attestation/v1-json"`. (In the future other encodings, such
+as CBOR, may be defined.)
 
 Prior to ITE-5, the existing in-toto signature wrapper may be used. In this
 case, the payload is always JSON with a `_type` of
-"https://in-toto.io/Attestation/v1".
+`"https://in-toto.io/Attestation/v1-json"`.
 
-## Claim schema (binding layer)
+## General attestation schema
 
-A claim is a JSON or CBOR object corresponding to the binding layer. It contains
-the following fields. See subsequent sections for
-[Type definitions](#type-definitions) and [Reasoning](#reasoning).
+Every attestation contains the following fields:
 
-`attestation_type` _(URI, required)_
+<a id="attestation_type"></a>
+`attestation_type` _string ([TypeURI]), required_
 
-> Indicates the meaning of this attestation and how to interpret `details` and
-> `relations`. Example:
+> URI representing the meaning of this attestation and how to interpret the rest
+> of the fields. Example:
 >
 > ```json
-> "attestation_type": "https://example.com/Provenance/v1"
-> ```
-
-`subject` _(ArtifactReference, recommended)_
-
-> Identifies what software artifact this attestation is about. Example:
->
-> ```json
-> "subject": {"sha256": "728f71…"}
+> "attestation_type": "https://in-toto.io/Provenance/v1"
 > ```
 >
-> If unset, the subject is unspecified. This is discouraged and only exists for
-> backwards compatibility and for very rare cases where a single subject does
-> not make sense. Such attestations may not be supported by BinAuthz.
->
-> Subject always refers to a single artifact (see [reasoning](#reasoning)). If
-> multiple subjects are desired, either:
->
-> *   Output one attestation per subject.
-> *   Create a single artifact that encapsulates all other artifacts, such as an
->     archive or hash tree. Then refer to this new artifact as the subject.
-> *   (discouraged) Define a custom artifact reference type with whatever
->     semantics are needed.
+> (Somewhat similar to `name` in [in-toto 0.9].)
 
-`relations` _(Map&lt;string, Set&lt;Object>>, optional)_
+<a id="subject"></a>
+`subject` _object ([ArtifactCollection]), required_
 
-> Identifies software artifacts related to `subject`. The map key indicates the
-> relationship type and the value contains the set of software artifacts having
-> that relation.
->
-> Example:
+> The collection of software artifacts this attestation is about. Example:
 >
 > ```json
-> "relations": {
->   "top_level_source": [{
->       "artifact": {"sha256": "a6a63f…"},
->       "filename": "grep_2.12-2.dsc"
->     }],
->   "dependent_sources": [{
->       "artifact": {"sha256": "37887d…"},
->       "filename": "grep_2.12-2.debian.tar.bz2"
->     }, {
->       "artifact": {"sha256": "011998…"},
->       "filename": "grep_2.12.orig.tar.bz2"
->     }],
->   "tools": [{
->       "artifact": {"sha256": "1234…"},
->       "filename": "gcc"
->     }]
+> "subject": {
+>   "curl-7.72.0.tar.bz2": { "sha256": "ad9197…" },
+>   "curl-7.72.0.tar.gz": { "sha256": "d4d589…" }
 > }
 > ```
 >
-> The meaning of the key is dependent on `attestation_type`. Each set value is
-> an _Object_ representing a single software artifact. The schema is dependent
-> on `attestation_type` and can contain arbitrary metadata, but it must always
-> have at least the following field:
+> When there is a single artifact whose name is not meaningful, is RECOMMENDED
+> to use `"_"` as the name.
 >
-> `artifact` _(ArtifactReference, required)_
->
-> > Identifies the related software artifact. The following standard relations
-> > are recommended[1]:
-> >
-> > *   `top_level_source`: The primary input used to generate this attestation
-> >     or subject, each of which is independent. Usually length one. In the
-> >     example, the "dsc" file is the top-level source because it fully
-> >     specifies the build.
-> > *   `dependent_sources`: Additional inputs used to generate this attestation
-> >     or subject, referenced by at least one `top_level_source`. In the
-> >     example, the two "tar.bz2" files are dependent because they are listed
-> >     in the "dsc" file.
-> > *   `tools`: Build tools, compilers, or other dependencies that would not be
-> >     considered "source".
-> > *   `environment`: Artifacts in the operating system that can influence the
-> >     build but that don't meet the definitions above.
-> > *   `other_products`: Other artifacts that were produced as part of the same
-> >     build.
->
-> **Alternate designs:**
->
-> 1.  Map&lt;string, Set&lt;ArtifactReference>>, where ArtifactReference can
->     contain arbitrary metadata, not just immutable IDs. May need something to
->     avoid clashes between standard fields (e.g. "sha256") and custom ones.
->     Pro: simpler to describe. Con: possibly more error prone.
-> 2.  Map&lt;string, Map&lt;string, ArtifactReference>>, where the outer map is
->     the same and the inner map is `attestation_type`-dependent, usually
->     filename. Pro: simpler than above. Con: users are forced to pick exactly
->     one type of metadata for the map key, with no ability to add other types
->     of metadata.
-> 3.  Set&lt;Object>, where the relationship type is a standard field, e.g.
->     `relation`. Pro: more extensible. Con: harder to iterate over.
+> (Roughly equivalent to `products` in [in-toto 0.9].)
 
-`details` _(Object, optional)_
+<a id="materials"></a>
+`materials` _object ([ArtifactCollection]), optional_
 
-> Contains the details in an `attestation_type`-dependent schema. Unset is
-> equivalent to set-but-empty. The binding layer treats this as opaque.
->
-> Example:
+> The collection of software artifacts that influenced the attestation, aside
+> from the `subject` itself. Example:
 >
 > ```json
-> "details": {
->   "build_timestamp": "2020-04-12T01:23:45Z",
->   "arch": "amd64"
+> "materials": {
+>   "git+https://github.com/curl/curl@curl-7_72_0": { "git_commit": "9d954e4…" },
+>   "pkg:deb/debian/stunnel4@5.50-3?arch=amd64": { "sha256": "e1731ae…" },
+>   "pkg:deb/debian/python-impacket@0.9.15-5?arch=all": { "sha256": "71fa2e6…" },
+>   "pkg:deb/debian/libzstd-dev@1.3.8+dfsg-3?arch=amd64": { "sha256": "91442b0…" },
+>   "pkg:deb/debian/libbrotli-dev@1.0.7-2+deb10u1?arch=amd64": { "sha256": "05b6e46…" }
 > }
 > ```
+>
+> (Unchanged from [in-toto 0.9].)
 
-The following are only needed for backwards compatibility:
+## Field type definitions
 
-`_type` _(URI, optional)_
+<a id="TypeURI"></a>
+_TypeURI (string)_
 
-> Indicates that this message is an attestation, with the exact value
-> "https://in-toto.io/Attestation/v1." Only needed prior to
-> [ITE-5](https://github.com/in-toto/ITE/pull/13). If this field is set,
-> verifiers **must** reject the attestation if the value differs.
+> Uniform Resource Identifier as specified in [RFC 3986], used as a
+> collision-resistant type identifier. Case sensitive and MUST be case
+> normalized as per section 6.2.2.1 of RFC 3986, meaning that the scheme and
+> authority MUST be in lowercase. SHOULD resolve to a human-readable
+> description, but MAY be unresolvable. SHOULD include a version number to allow
+> for revisions. Example: `"https://in-toto.io/Attestation/v1"`.
 
-## Link schema (details layer)
+<a id="ArtifactCollection"></a>
+_ArtifactCollection (object)_
 
-Going forward, it is expected that most applications will use a custom
-attestationType with its own schema rather than relying on a generic Link
+> A collection of software artifacts. Each key/value pair represents a single
+> software artifact, such as a file, a container image, or a git commit.
+>
+> The key identifies the artifact relative to this attestation. It MUST be a URI
+> or path-noscheme ([RFC 3986]). If it is a URI, it MUST be case normalized and
+> SHOULD resolve to the artifact, but MAY be unresolvable. It is RECOMMENDED to
+> use [Package URL][] (`pkg:`) or [SPDX Download Location][] (e.g.
+> `git+https:`). If path-noscheme, it SHOULD represent a relative filesystem
+> path.
+>
+> The value contains cryptographic digests of the artifact's content. It is a
+> map from digest type to digest value (string), encoded as lowercase hex. The
+> digest type unambiguously identifies the hash algorithm and how it is applied
+> to the artifact. An artifact MUST be considered matching if *any* of its
+> digests match. Verifiers MUST choose which digest types they accept and MUST
+> ignore digest types they do not accept or recognize. The value MAY be empty or
+> null, meaning that no digest is available.
+>
+> The following digests types are RECOMMENDED:
+>
+> *   Regular File: `sha256`
+> *   Git repository: `git_commit`
+> *   Mercurial repository: `hg_changeset`
+> *   Container image: [`oci_image_id`][oci_image_id] and `oci_repo_digest`. It
+>     is best to list both when available. The former is registry independent
+>     (over the uncompressed manifest) while the latter depends on the registry
+>     (computed over the compressed manifest). Example for
+>     [docker.io/curlimages/curl:7.72.0 amd64](https://hub.docker.com/layers/curlimages/curl/7.72.0/images/sha256-3c3ff0c379abb1150bb586c7d55848ed4dcde4a6486b6f37d6815aed569332fe):
+>     `{"oci_image_id": "sha256:d2d63f4...", "oci_repo_digest":
+>     "sha256:3c3ff0c..."}`
+>
+> Additional pre-defined digest types: `sha224`, `sha384`, `sha512`,
+> `sha512_224`, `sha512_256`, `sha3_224`, `sha3_256`, `sha3_384`, `sha3_512`,
+> `shake128`, `shake256`, `blake2b`, `blake2s`, `md5` (DISCOURAGED), `sha1`
+> (DISCOURAGED).
+>
+> Custom digest types MAY be used if none of the recommended or pre-defined
+> digest types work.
+
+<a id="Timestamp"></a>
+_Timestamp (string)_
+
+> A point in time, represented as a string in [RFC 3339] format in the UTC time
+> zone ("Z"). Example: `"1985-04-12T23:20:50.52Z"`.
+
+## Provenance schema
+
+```json
+"attestation_type": "https://in-toto.io/Provenance/v1"
+```
+
+A provenance-type attestation explains the process that produced the `subject`.
+The `materials` SHOULD include all artifacts that influenced the build,
+including sources, dependencies, build tools, base images, and so on.
+
+Provenance attestations have the following type-specific fields:
+
+<a id="builder"></a>
+`builder` _object, required_
+
+> Idenfifies the entity that executed the build steps. Example:
+>
+> ```json
+> "builder": {
+>   "id": "https://github.com/Attestations/GitHubHostedActions@v1"
+> }
+> ```
+>
+> This is distinct from the signer because one signer may generate attestations
+> for more than one builder. For example, a signle GitHubActions signer may
+> produce attestations for both "github-hosted runner" and various "self-hosted
+> runner" builders.
+>
+> Even though it may be implicit from the signer, it is required to aid
+> readability and debugging.
+>
+> Verifiers MUST only accept specific builders from specific signers.
+
+<a id="builder.id"></a>
+`builder.id` _string ([TypeURI]), required_
+
+> URI indicating the builder's identity.
+
+<a id="recipe"></a>
+`recipe` _object, optional_
+
+> Describes the actions that the builder performed. Example:
+>
+> ```json
+> "recipe": {
+>   "type": "https://github.com/Attestations/GitHubActionsWorkflow@v1",
+>   "material": "git+https://github.com/curl/curl@curl-7_72_0",
+>   "entry_point": "build.yaml:maketgz",
+>   "arguments": null
+> }
+> ```
+>
+> MAY be omitted if unknown or implicit from the builder.
+
+<a id="recipe.type"></a>
+`recipe.type` _string ([TypeURI]), required_
+
+> URI indicating what type of recipe was performed. It determines the meaning
+> of `recipe.entry_point`, `recipe.arguments`, `materials`, and
+> `reproducibility`.
+
+<a id="recipe.material"></a>
+`recipe.material` _string, optional_
+
+> Key in `materials` containing the recipe steps that are not implied by
+> `recipe.type`. For example, if the recipe type were "make", then this would
+> point to the source containing the Makefile, not the `make` program itself.
+>
+> Omit this field (or use null) if the recipe doesn't come from a material.
+>
+> TODO: What if there is more than one material?
+
+<a id="recipe.entry_point"></a>
+`recipe.entry_point` _string, optional_
+
+> String identifying the entry point. The meaning is defined by `recipe.type`.
+> For example, if the recipe type were "make", then this would reference the
+> directory in which to run `make` as well as which target to use.
+>
+> MAY be omitted if the recipe type specifies a default value.
+
+<a id="recipe.arguments"></a>
+`recipe.arguments` _object, optional_
+
+> Collection of input arguments that influenced the build on top of
+> `recipe.material` and `recipe.entry_point`. The schema is defined by
+> `recipe.type`.
+>
+> Omit this field (or use null) to indicate "no arguments."
+
+<a id="reproducibility"></a>
+`reproducibility` _object, optional_
+
+> Other information that is needed to reproduce the build but that cannot be
+> controlled by users. The schema is determined by `recipe.type`.
+
+<a id="metadata"></a>
+`metadata` _object, optional_
+
+> Other properties of the build.
+
+<a id="metadata.build_timestamp"></a>
+`metadata.build_timestamp` _string ([Timestamp]), optional_
+
+> The timestamp of when the build occurred.
+
+<a id="metadata.materials_complete"></a>
+`metadata.materials_complete` _boolean, optional_
+
+> If true, `materials` is claimed to be complete, usually through some
+> controls to prevent network access.
+
+## Link type
+
+Going forward, it is expected that most applications will use a more specific
+`attestation_type` with its own schema rather than relying on a generic Link
 schema.
 
 That said, we define a backwards compatible Link format that is isomorphic with
@@ -218,147 +294,29 @@ the old format and supported by existing layouts:
 
 Old Field Name  | New Field Name
 --------------- | -----------------------------------------------
-`_type: "link"` | `attestationType: "https://in-toto.io/Link/v1"`
-`materials`     | `relations.materials` (\*)
-`products`      | `relations.products` (\*)
-`name`          | `details.name`
-`command`       | `details.command`
-`byproducts`    | `details.byproducts`
-`environment`   | `details.environment`
-
-(\*) `materials[<key>] = <value>` is translated to
-`relations.materials[<index>] = { filename: <key>, artifact: <value> }`, and
-similarly for `products`.
-
-## Type definitions
-
-_Object_
-
-> A JSON/CBOR object whose schema depends on `attestation_type`.
-
-_Map&lt;string, ValueType>_
-
-> A JSON/CBOR object with arbitrary keys and whose values have the specified
-> type.
-
-_Set&lt;ValueType>_
-
-> A JSON/CBOR array where each element has the specified type and order is not
-> meaningful.
-
-_URI_
-
-> A string containing a Uniform Resource Identifier as specified in
-> [RFC 3986](https://tools.ietf.org/html/rfc3986), used as a collision-resistant
-> identifier. Case sensitive and **must** be case normalized as per section
-> 6.2.2.1 of RFC 3986, meaning that the scheme and host must be in lowercase.
-> Needs not be resolvable; if it is, the result **should** be a human-readable
-> description of the schema. **Should** include a version number to allow for
-> revisions to the schema. Example: "https://in-toto.io/Attestation/v1".
-
-_ArtifactReference_
-
-> A map of immutable identifiers for a single software artifact. Each key/value
-> pair is an alternate identifier for the same artifact, where the key indicates
-> the type of the identifier. An artifact matches the reference if _any_ of its
-> identifiers match. Example: `{"sha256": "abcd…", "sha512": "1234…"}` means an
-> artifact whose content hash is either SHA-256 `abcd…` or SHA-512 `1234…`.
-> Previously called a "hash object."
->
-> A set of [well-known types](#well-known-artifact-reference-types) cover the
-> most common content hashes. All well-known types have a key in snake\_case
-> (lower alphanumeric + underscore, starting with a letter) and a value encoded
-> as a lowercase hex string.
->
-> Custom types may be used to either define custom artifact IDs or custom
-> semantics. For example, this may be used to support permalinks to an
-> organization's centralized version control system. Another example is to
-> define "and" semantics, where all IDs must match. All custom-type keys
-> **must** start with an underscore or be a _URI_ (thus containing a colon). The
-> value can be any type, such as an array or object. The key is case sensitive.
-
-# Well-known artifact reference types
-
-List of planned well-known types, which are all pure content hashes and all
-represented as lowercase hex strings.
-
-*   Generic cryptographic content hash of a blob of data (**bold** =
-    recommended):
-    *   sha224, **sha256**, sha384, **sha512**, sha512\_224, sha512\_256
-    *   sha3\_224, sha3\_256, sha3\_384, sha3\_512
-    *   shake\_128, shake\_256
-    *   blake2b, blake2s
-    *   md5 (discouraged)
-    *   sha1 (discouraged)
-*   Application-specific cryptographic content hash:
-    *   container\_image\_digest
-    *   git\_commit
-    *   hg\_changeset
-
-Open question: Should we define well-known types that are not pure content
-hashes? Ideas:
-
-*   cpe ([Common Platform Enumeration](https://nvd.nist.gov/products/cpe))
-    *   Example: `"cpe:2.3:a:gnu:gcc:2.95.1:…"`
-    *   Pro: Could be useful for recording
-        [CVE Entries](https://en.wikipedia.org/wiki/Common_Vulnerabilities_and_Exposures).
-    *   Pro: Could be useful as a "source" in a provenance attestation (i.e. not
-        subject).
-    *   Con: Goes against monotonicity principle. Instead, we recommend an
-        attestation saying "zero CVEs".
-    *   Con: Goes against our idea for binding attestations to particular
-        artifacts. This, on the other hand, is more of a matcher.
-*   git\_repo (git URL and optionally branch)
-    *   Example: `"{ url: "https://github.com/curl/curl", branch: "master" }`
-    *   Pro: Could be used to, for example, say that a particular repo was
-        configured in a certain way, e.g. had code review enabled.
-    *   Pro: Could be useful as a "source" in a provenance attestation (i.e. not
-        subject).
-    *   Con: Not an immutable reference to a software artifact.
+`_type: "link"` | `attestation_type: "https://in-toto.io/Link/v1"`
+`products`      | `subject`
+`materials`     | `materials`
+`name`          | `name`
+`command`       | `command`
+`byproducts`    | `byproducts`
+`environment`   | `environment`
 
 ## Notes
 
-Attestations **should** be designed to encourage policies to be "monotonic,"
-meaning that deleting an attestation will never turn a DENY decision into an
-ALLOW. One reason for this is because verifiers must ignore unrecognized
-subjects; if no subject is recognized, the attestation is effectively deleted.
+Attestations SHOULD be designed to encourage policies to be "monotonic," meaning
+that deleting an attestation will never turn a DENY decision into an ALLOW. One
+reason for this is because verifiers MUST ignore unrecognized subject digest
+types; if no subject is recognized, the attestation is effectively deleted.
 Example: instead of "deny if a 'has vulnerabilities' attestation exists", prefer
 "deny unless a 'no vulnerabilities' attestation exists".
 
 Attestation designers are free to limit what subject types are valid for a given
 attestation type. For example, suppose a "Gerrit code review" attestation only
-applies to "git\_commit" subjects. In that case, a producer of such attestations
-should never use a subject other than "git\_commit."
+applies to `git_commit` subjects. In that case, a producer of such attestations
+should never use a subject other than `git_commit`.
 
 # Examples
-
-## Link-type attestation
-
-Links can be mechanically translated to the new format, without a `subject`.
-This doesn't take advantage of the new features, but it does provide backwards
-compatibility with existing layouts.
-
-```json
-{
-  "attestation_type": "https://in-toto.io/Link/v1",
-  "relations": {
-    "products": [{
-      "filename": "foo.tar.gz",
-      "artifact": { "sha256": "78a73f2e55ef15930b137e43b9e90a0b..." }
-    }],
-    "materials": [{
-      "filename": "foo.py",
-      "artifact": { "sha256": "2a0ffef5e9709e6164c629e8b31bae0d..." }
-    }]
-  },
-  "details": {
-    "name": "package",
-    "command": "tar zcvf foo.tar.gz foo.py",
-    "byproducts": { … },
-    "environment": { … }
-  }
-}
-```
 
 ## Custom-type attestations
 
@@ -370,13 +328,15 @@ examples to explain the benefits for the new link format.
 The initial step is often to write code. This has no materials and no real
 command. The existing Link schema has little benefit. Instead, a custom
 `attestation_type` would avoid all of the meaningless boilerplate fields. This
-example also shows the use of a `git_commit_id` artifact type.
+example also shows the use of a `git_commit` artifact type.
 
 ```json
 {
   "attestation_type": "https://example.com/WriteCode/v1",
   "subject": {
-    "git_commit_id": "859b387b985ea0f414e4e8099c9f874acb217b94"
+    "git+https://github.com/example/my-project@master": {
+      "git_commit": "859b387b985ea0f414e4e8099c9f874acb217b94"
+    }
   }
 }
 ```
@@ -389,15 +349,17 @@ better fit:
 {
   "attestation_type": "https://example.com/TestResult/v1",
   "subject": {
-    "git_commit_id": "859b387b985ea0f414e4e8099c9f874acb217b94"
+    "_": {
+      "git_commit": "859b387b985ea0f414e4e8099c9f874acb217b94"
+    }
   },
-  "details": {
-    "passed": true
-  }
+  "passed": true
 }
 ```
 
 # Motivating use case
+
+**TODO: This section has not yet been updated for latest schema.**
 
 MyCompany wants to centrally enforce the following rules of its production
 Kubernetes environments:
@@ -471,20 +433,20 @@ good_tool(relation):
 
 vulnerability_scan(attestation):
   attestation is signed by 'MyCompanyScanner'
-  attestation.attestationType == 'https://example.com/VulnerabilityScan/v1'
+  attestation.attestation_type == 'https://example.com/VulnerabilityScan/v1'
   attestation.details.vulnerability_counts.high == 0
   attestation.details.timestamp is within 14 days of today
 
 first_party_code_review(attestation):
   attestation is signed by 'GitHub'
-  attestation.attestationType == 'https://example.com/CodeReview/v1'
+  attestation.attestation_type == 'https://example.com/CodeReview/v1'
   attestation.details.repo_url starts with 'https://github.com/my-company/'
   attestation.details.code_reviewed == true
   attestation.details.timestamp is within 30 days of today
 
 reproducible_build(attestation):
   attestation is signed by 'ReproducibleBuilds'
-  attestation.attestationType == 'https://example.com/ReproducibleBuild/v1'
+  attestation.attestation_type == 'https://example.com/ReproducibleBuild/v1'
 
 verifiable_build(attestation):
   return (hermetic_github_action(attestation) or
@@ -493,22 +455,22 @@ verifiable_build(attestation):
 
 hermetic_github_action(attestation):
   attestation is signed by 'GitHubActions'
-  attestation.attestationType == 'https://example.com/GitHubActionProduct/v1'
+  attestation.attestation_type == 'https://example.com/GitHubActionProduct/v1'
   attestation.details.hermetic == true
 
 hermetic_cloud_build(attestation):
   attestation is signed by 'GoogleCloudBuild'
-  attestation.attestationType == 'https://example.com/GoogleCloudBuildProduct/v1'
+  attestation.attestation_type == 'https://example.com/GoogleCloudBuildProduct/v1'
   attestation.details.no_network == true
 
 hermetic_cloud_build(attestation):
   attestation is signed by 'AwsCodeBuild'
-  attestation.attestationType == 'https://example.com/AwsCodeBuildProduct/v1'
+  attestation.attestation_type == 'https://example.com/AwsCodeBuildProduct/v1'
   attestation.details.no_network == true
 
 # Types of artifact IDs considered by `lookup attestations for <X>`.
 allowed_artifact_id_types = [
-  'sha256', 'sha512', 'container_image_digest', 'git_commit_id',
+  'sha256', 'sha512', 'container_image_digest', 'git_commit',
 ]
 ```
 
@@ -531,7 +493,7 @@ appropriate party; we only show the claim here.
 ```json
 {
   "attestation_type": "https://example.com/CodeReview/v1",
-  "subject": { "git_commit_id": "859b387b985ea0f414e4e8099c9f874acb217b94" },
+  "subject": { "git_commit": "859b387b985ea0f414e4e8099c9f874acb217b94" },
   "details": {
     "timestamp": "2020-04-12T13:50:00Z",
     "repo_type": "git",
@@ -545,7 +507,7 @@ appropriate party; we only show the claim here.
 ```json
 {
   "attestation_type": "https://example.com/CodeReview/v1",
-  "subject": { "git_commit_id": "2f02c094e6a9afe8e889c3f1d3cb66b437797af4" },
+  "subject": { "git_commit": "2f02c094e6a9afe8e889c3f1d3cb66b437797af4" },
   "details": {
     "timestamp": "2020-04-12T13:50:00Z",
     "repo_type": "git",
@@ -559,7 +521,7 @@ appropriate party; we only show the claim here.
 ```json
 {
   "attestation_type": "https://example.com/CodeReview/v1",
-  "subject": { "git_commit_id": "5215a97a7978d8ee0de859ccac1bbfd2475bfe92" },
+  "subject": { "git_commit": "5215a97a7978d8ee0de859ccac1bbfd2475bfe92" },
   "details": {
     "timestamp": "2020-04-12T13:50:00Z",
     "repo_type": "git",
@@ -573,7 +535,7 @@ appropriate party; we only show the claim here.
 ```json
 {
   "attestation_type": "https://example.com/VulnerabilityScan/v1",
-  "subject": { "git_commit_id": "859b387b985ea0f414e4e8099c9f874acb217b94" },
+  "subject": { "git_commit": "859b387b985ea0f414e4e8099c9f874acb217b94" },
   "details": {
     "timestamp": "2020-04-12T13:55:02Z",
     "vulnerability_counts": {
@@ -591,14 +553,14 @@ appropriate party; we only show the claim here.
   "subject": { "container_image_digest": "sha256:c201c331d6142766c866..." },
   "relations": {
     "top_level_source": [{
-      "artifact": { "git_commit_id": "859b387b985ea0f414e4e8099c9f874acb217b94" },
+      "artifact": { "git_commit": "859b387b985ea0f414e4e8099c9f874acb217b94" },
       "git_repo": "https://github.com/example/repo"
     }],
     "dependent_sources": [{
-      "artifact": { "git_commit_id": "2f02c094e6a9afe8e889c3f1d3cb66b437797af4" },
+      "artifact": { "git_commit": "2f02c094e6a9afe8e889c3f1d3cb66b437797af4" },
       "git_repo": "https://github.com/example/submodule1"
       }, {
-      "artifact": { "git_commit_id": "5215a97a7978d8ee0de859ccac1bbfd2475bfe92" },
+      "artifact": { "git_commit": "5215a97a7978d8ee0de859ccac1bbfd2475bfe92" },
       "git_repo": "https://github.com/example/submodule2"
     }],
     "tools": [{
@@ -653,7 +615,7 @@ kubernetes_policy(artifact):
 
 passed_policy_evaluation(attestation):
   attestation is signed by 'BinaryAuthorization'
-  attestation.attestationType == 'https://example.com/BinAuthzDecision/v1'
+  attestation.attestation_type == 'https://example.com/BinAuthzDecision/v1'
   attestation.details.decision == 'allow'
   attestation.details.timestamp is within 24 hours of now
   attestation.details.environment matches this Kubernetes environment
@@ -718,8 +680,6 @@ Functional requirements:
 
 Nonfunctional requirements:
 
-*   Must differentiate between layers in the model, with clear interfaces
-    between them.
 *   Must support backwards compatible links that can be consumed by existing
     layout files.
 *   Must differentiate between different types of related artifacts (only if
@@ -730,88 +690,36 @@ Nonfunctional requirements:
 
 # Reasoning
 
-## General questions
+## Reason for `subject` and `materials` to be standard Attestation fields
 
-*   Why separate `_type` vs `attestation_type`?
-    *   Because those are two different layers. The binding layer is identified
-        by `_type`, while the details layer is identified by `attestation_type`.
-        The separation allows frameworks to process the binding layer without
-        understanding `attestation_type`.
-*   Why split attestation layer from binding layer?
-    *   Because cryptography is difficult and we want to use a standard
-        authentication layer that is not specific to in-toto.
-*   Why split the binding layer from the details layer? Why is it beneficial for
-    a framework to process the binding without understanding the attestation
-    type?
-    *   This allows for optional indexing of attestations and having policy
-        frameworks verify the bindings in a standard manner. While attestations
-        are free to implement their own binding semantics outside this
-        framework, we expect that to be an edge case. We want the 99% case to be
-        easy.
-*   Why not a protobuf encoding?
-    *   Because there is no good way, that we have figured out, to support the
-        same level of flexibility and readability as we have with JSON/CBOR.
-        While it seems reasonable that an application-specific protobuf encoding
-        could be defined, it doesn't really make sense to define a generic one
-        because it would be not much more compact than CBOR.
+There are two main reasons for standardizing `subject` and `materials` within
+Attestation schema.
 
-## Reason for `subject` and `relations` in the binding layer
-
-There are two main reasons for standardizing `subject` and `relations` within
-the binding layer.
-
-First, doing so allows policy engines to make decisions purely on the binding
-layer without requiring `attestation_type`-specific logic or configuration.
-Binary Authorization policies today are purely about "does an attestation exist
-that is signed by X with subject Y", and similarly in-toto layouts are about
-"does an attestation exist that is signed by X with relations Z?"[2] These
-relatively simple policies are quite powerful. With this proposal, such policies
-become more expressive without any additional configuration: "does an
-attestation exist that is signed by X having type T, with subject Y and/or
-relations Z?"
+First, doing so allows policy engines to make decisions without requiring
+`attestation_type`-specific logic or configuration. Binary Authorization
+policies today are purely about "does an attestation exist that is signed by X
+with subject Y", and similarly in-toto layouts are about "does an attestation
+exist that is signed by X with materials/products Z?"[1] These relatively simple
+policies are quite powerful. With this proposal, such policies become more
+expressive without any additional configuration: "does an attestation exist that
+is signed by X having type T, with subject Y and/or materials Z?"
 
 Second, it enables lookup of attestations by `subject`, again without
 `attestation_type`-specific logic or configuration. Consider the policy
 described in the [motivating use case](#motivating-use-case). There, the
 instruction is "fetch attestations for artifact X". The lookup could be from a
 set of attestations provided by the caller, or it could be from an external
-database keyed by subject.[3] Without a standardized `subject` field, this would
+database keyed by subject.[2] Without a standardized `subject` field, this would
 be significantly harder.
 
-The alternative is to move `subject` and/or `relations` into the details layer.
-Doing so would require users to configure the system for every possible
-`attestation_type` they wanted to support, in order to instruct the system how
-to find subject and relations. Furthermore, because there would be no
-standardization, concepts and models may not necessarily translate between
+The alternative is to make `subject` and/or `materials` specific to each
+`attestation_type`. Doing so would require users to configure the system for
+every possible `attestation_type` they wanted to support, in order to instruct
+the system how to find subject and relations. Furthermore, because there would
+be no standardization, concepts and models may not necessarily translate between
 attestation types. For example, one attestation type might require an "or"
 between artifact IDs, while another requires an "and." This difference would add
 complexity and confusion.
-
-## Reason for singular `subject`
-
-The reason `subject` is singular is to avoid a common security vulnerability. If
-there are multiple subjects (e.g. multiple `products`), then it is too easy for
-users to assume that all of the artifacts are equivalent when in fact they are
-not. For example, suppose that GitHub Actions records an attestation saying that
-it produced a binary and its README file. It would be a security mistake to
-treat these two files as interchangeable. Thus, the policy must verify not only
-that the binary was produced by GitHub Actions from the appropriate git repo,
-but also that the output filename was correct. This burdens the policy with
-having to know the right output filename. If the filename changes, the policy
-breaks. We avoid all of this by having a single subject. (Note: the current
-in-toto layout file does not have this vulnerability because it does indeed
-verify filenames, but we argue that this is brittle.)
-
-In almost all cases where multiple subjects are desired, it is better to either:
-
-*   Output multiple attestations, one per artifact, with `details` describing
-    the difference. Using our example above, a `details.filename` field could
-    differentiate between the two. This is just as brittle, but it makes it more
-    obvious that the two files are different.
-*   Output a single artifact that in turn contains the content or hashes of all
-    the other artifacts. For example, instead of outputting a binary and a
-    README, output a single tarball containing both. This has the advantage of
-    also covering the metadata such as the POSIX permission bits.
 
 # Backwards Compatibility
 
@@ -831,62 +739,24 @@ layouts.
 
 # Open Questions
 
-## Timestamps
-
-Should we add timestamps to the binding layer? In our motivating example, note
-that most of the attestations do have a timestamp. Thus, it could be beneficial
-to standardize it.
-
-`timestamp` _(Timestamp, optional)_
-
-> Timestamp as of when this claim was valid. Verifiers **may** use this to
-> compute validity, such as "only accept attestations at most 7 days old."
->
-> Example: the CodeReview attestation says that `details.git_branch` on
-> `details.git_repo` pointed to `subject.git_commit` at `timestamp`.
->
-> _Reason for deletion_: Although the definition is pretty clear, it could be
-> misinterpreted. Is it the time of the signature? Time of the attestation
-> creation? Time of the build? Timestamp of the source code? Something else? It
-> may be better to avoid this confusion and move it to the details layer where
-> it can be made unambiguous.
-
-`not_valid_after` _(Timestamp, optional)_
-
-> Timestamp after which this attestation is invalid. If unspecified, the
-> attestation is considered valid indefinitely. Verifiers **must** reject the
-> attestation if the current timestamp is greater than this value, optionally
-> allowing for a window of clock skew.
->
-> _Reason for deletion:_ It's not clear that this is a general feature of an
-> attestation. Why should attestations be repudiable? If something was true at
-> some time in the past, the fact that it was true at some time in the past
-> doesn't expire. Thus, the expiration should really be handled in the details
-> layer. And as for signature expiration, that should be handled by the
-> authentication layer, not the binding layer.
-
-`not_valid_before` _(Timestamp, optional)_
-
-> (similar to `not_valid_after`)
-
-_Timestamp_
-
-> A point in time. In JSON and CBOR, this is a string in
-> [RFC 3339](https://tools.ietf.org/html/rfc3339) format in the UTC time zone
-> ("Z"). Example: "1985-04-12T23:20:50.52Z".
-
 # Footnotes
 
-\[1]: Standardization wil be beneficial because (a) 95% of use cases will fit
-into these fields and (b) it makes writing policies easier if all attestations
-use the same conventions.
-
-\[2]: The `expected_command` is only a warning, and `inspections` require
+\[1]: The `expected_command` is only a warning, and `inspections` require
 running external commands which is infeasible in many situations.
 
-\[3]: That said, we strongly recommend against keying a database purely by
+\[2]: That said, we strongly recommend against keying a database purely by
 content hash. The reason is that such databases quickly run into scaling issues,
 as explained in
 [Building Secure and Reliable Systems](https://static.googleusercontent.com/media/landing.google.com/en//sre/static/pdf/Building_Secure_and_Reliable_Systems.pdf#page=364),
 Chapter 14, page 328, "Ensure Unambiguous Provenance." Instead, we recommend
 keying primarily by resource name, in addition to content hash.
+
+[ArtifactCollection]: #ArtifactCollection
+[Package URL]: https://github.com/package-url/purl-spec/
+[RFC 3339]: https://tools.ietf.org/html/rfc3339
+[RFC 3986]: https://tools.ietf.org/html/rfc3986
+[SPDX Download Location]: https://spdx.github.io/spdx-spec/3-package-information/#37-package-download-location
+[Timestamp]: #Timestamp
+[TypeURI]: #TypeURI
+[in-toto 0.9]: https://github.com/in-toto/docs/blob/v0.9/in-toto-spec.md
+[oci_image_id]: https://github.com/opencontainers/image-spec/blob/master/config.md#imageid
