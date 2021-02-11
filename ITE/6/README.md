@@ -60,249 +60,18 @@ Prior to ITE-5, the existing in-toto signature wrapper may be used. In this
 case, the payload is always JSON with a `_type` of
 `"https://in-toto.io/Attestation/v1-json"`.
 
-## General attestation schema
+## Schema
 
-Every attestation contains the following fields:
+*   [Attestation v1](spec/attestation.md) (base class)
+*   [Provenance v1](spec/provenance.md)
+*   [Link v1](spec/link.md) (matches [in-toto 0.9])
 
-<a id="attestation_type"></a>
-`attestation_type` _string ([TypeURI]), required_
+We expect to a few more standard attestation types over time, and customers may
+define their own custom attestation types if desired.
 
-> URI representing the meaning of this attestation and how to interpret the rest
-> of the fields. Example:
->
-> ```json
-> "attestation_type": "https://in-toto.io/Provenance/v1"
-> ```
->
-> (Somewhat similar to `name` in [in-toto 0.9].)
+See [examples](#examples) to get a gist of the schema.
 
-<a id="subject"></a>
-`subject` _object ([ArtifactCollection]), required_
-
-> The collection of software artifacts this attestation is about. Example:
->
-> ```json
-> "subject": {
->   "curl-7.72.0.tar.bz2": { "sha256": "ad9197…" },
->   "curl-7.72.0.tar.gz": { "sha256": "d4d589…" }
-> }
-> ```
->
-> When there is a single artifact whose name is not meaningful, is RECOMMENDED
-> to use `"_"` as the name.
->
-> (Roughly equivalent to `products` in [in-toto 0.9].)
-
-<a id="materials"></a>
-`materials` _object ([ArtifactCollection]), optional_
-
-> The collection of software artifacts that influenced the attestation, aside
-> from the `subject` itself. Example:
->
-> ```json
-> "materials": {
->   "git+https://github.com/curl/curl@curl-7_72_0": { "git_commit": "9d954e4…" },
->   "pkg:deb/debian/stunnel4@5.50-3?arch=amd64": { "sha256": "e1731ae…" },
->   "pkg:deb/debian/python-impacket@0.9.15-5?arch=all": { "sha256": "71fa2e6…" },
->   "pkg:deb/debian/libzstd-dev@1.3.8+dfsg-3?arch=amd64": { "sha256": "91442b0…" },
->   "pkg:deb/debian/libbrotli-dev@1.0.7-2+deb10u1?arch=amd64": { "sha256": "05b6e46…" }
-> }
-> ```
->
-> (Unchanged from [in-toto 0.9].)
-
-## Field type definitions
-
-<a id="TypeURI"></a>
-_TypeURI (string)_
-
-> Uniform Resource Identifier as specified in [RFC 3986], used as a
-> collision-resistant type identifier. Case sensitive and MUST be case
-> normalized as per section 6.2.2.1 of RFC 3986, meaning that the scheme and
-> authority MUST be in lowercase. SHOULD resolve to a human-readable
-> description, but MAY be unresolvable. SHOULD include a version number to allow
-> for revisions. Example: `"https://in-toto.io/Attestation/v1"`.
-
-<a id="ArtifactCollection"></a>
-_ArtifactCollection (object)_
-
-> A collection of software artifacts. Each key/value pair represents a single
-> software artifact, such as a file, a container image, or a git commit.
->
-> The key identifies the artifact relative to this attestation. It MUST be a URI
-> or path-noscheme ([RFC 3986]). If it is a URI, it MUST be case normalized and
-> SHOULD resolve to the artifact, but MAY be unresolvable. It is RECOMMENDED to
-> use [Package URL][] (`pkg:`) or [SPDX Download Location][] (e.g.
-> `git+https:`). If path-noscheme, it SHOULD represent a relative filesystem
-> path.
->
-> The value contains cryptographic digests of the artifact's content. It is a
-> map from digest type to digest value (string), encoded as lowercase hex. The
-> digest type unambiguously identifies the hash algorithm and how it is applied
-> to the artifact. An artifact MUST be considered matching if *any* of its
-> digests match. Verifiers MUST choose which digest types they accept and MUST
-> ignore digest types they do not accept or recognize. The value MAY be empty or
-> null, meaning that no digest is available.
->
-> The following digests types are RECOMMENDED:
->
-> *   Regular File: `sha256`
-> *   Git repository: `git_commit`
-> *   Mercurial repository: `hg_changeset`
-> *   Container image: [`oci_image_id`][oci_image_id] and `oci_repo_digest`. It
->     is best to list both when available. The former is registry independent
->     (over the uncompressed manifest) while the latter depends on the registry
->     (computed over the compressed manifest). Example for
->     [docker.io/curlimages/curl:7.72.0 amd64](https://hub.docker.com/layers/curlimages/curl/7.72.0/images/sha256-3c3ff0c379abb1150bb586c7d55848ed4dcde4a6486b6f37d6815aed569332fe):
->     `{"oci_image_id": "sha256:d2d63f4...", "oci_repo_digest":
->     "sha256:3c3ff0c..."}`
->
-> Additional pre-defined digest types: `sha224`, `sha384`, `sha512`,
-> `sha512_224`, `sha512_256`, `sha3_224`, `sha3_256`, `sha3_384`, `sha3_512`,
-> `shake128`, `shake256`, `blake2b`, `blake2s`, `md5` (DISCOURAGED), `sha1`
-> (DISCOURAGED).
->
-> Custom digest types MAY be used if none of the recommended or pre-defined
-> digest types work.
-
-<a id="Timestamp"></a>
-_Timestamp (string)_
-
-> A point in time, represented as a string in [RFC 3339] format in the UTC time
-> zone ("Z"). Example: `"1985-04-12T23:20:50.52Z"`.
-
-## Provenance schema
-
-```json
-"attestation_type": "https://in-toto.io/Provenance/v1"
-```
-
-A provenance-type attestation explains the process that produced the `subject`.
-The `materials` SHOULD include all artifacts that influenced the build,
-including sources, dependencies, build tools, base images, and so on.
-
-Provenance attestations have the following type-specific fields:
-
-<a id="builder"></a>
-`builder` _object, required_
-
-> Idenfifies the entity that executed the build steps. Example:
->
-> ```json
-> "builder": {
->   "id": "https://github.com/Attestations/GitHubHostedActions@v1"
-> }
-> ```
->
-> This is distinct from the signer because one signer may generate attestations
-> for more than one builder. For example, a signle GitHubActions signer may
-> produce attestations for both "github-hosted runner" and various "self-hosted
-> runner" builders.
->
-> Even though it may be implicit from the signer, it is required to aid
-> readability and debugging.
->
-> Verifiers MUST only accept specific builders from specific signers.
-
-<a id="builder.id"></a>
-`builder.id` _string ([TypeURI]), required_
-
-> URI indicating the builder's identity.
-
-<a id="recipe"></a>
-`recipe` _object, optional_
-
-> Describes the actions that the builder performed. Example:
->
-> ```json
-> "recipe": {
->   "type": "https://github.com/Attestations/GitHubActionsWorkflow@v1",
->   "material": "git+https://github.com/curl/curl@curl-7_72_0",
->   "entry_point": "build.yaml:maketgz",
->   "arguments": null
-> }
-> ```
->
-> MAY be omitted if unknown or implicit from the builder.
-
-<a id="recipe.type"></a>
-`recipe.type` _string ([TypeURI]), required_
-
-> URI indicating what type of recipe was performed. It determines the meaning
-> of `recipe.entry_point`, `recipe.arguments`, `materials`, and
-> `reproducibility`.
-
-<a id="recipe.material"></a>
-`recipe.material` _string, optional_
-
-> Key in `materials` containing the recipe steps that are not implied by
-> `recipe.type`. For example, if the recipe type were "make", then this would
-> point to the source containing the Makefile, not the `make` program itself.
->
-> Omit this field (or use null) if the recipe doesn't come from a material.
->
-> TODO: What if there is more than one material?
-
-<a id="recipe.entry_point"></a>
-`recipe.entry_point` _string, optional_
-
-> String identifying the entry point. The meaning is defined by `recipe.type`.
-> For example, if the recipe type were "make", then this would reference the
-> directory in which to run `make` as well as which target to use.
->
-> MAY be omitted if the recipe type specifies a default value.
-
-<a id="recipe.arguments"></a>
-`recipe.arguments` _object, optional_
-
-> Collection of input arguments that influenced the build on top of
-> `recipe.material` and `recipe.entry_point`. The schema is defined by
-> `recipe.type`.
->
-> Omit this field (or use null) to indicate "no arguments."
-
-<a id="reproducibility"></a>
-`reproducibility` _object, optional_
-
-> Other information that is needed to reproduce the build but that cannot be
-> controlled by users. The schema is determined by `recipe.type`.
-
-<a id="metadata"></a>
-`metadata` _object, optional_
-
-> Other properties of the build.
-
-<a id="metadata.build_timestamp"></a>
-`metadata.build_timestamp` _string ([Timestamp]), optional_
-
-> The timestamp of when the build occurred.
-
-<a id="metadata.materials_complete"></a>
-`metadata.materials_complete` _boolean, optional_
-
-> If true, `materials` is claimed to be complete, usually through some
-> controls to prevent network access.
-
-## Link type
-
-Going forward, it is expected that most applications will use a more specific
-`attestation_type` with its own schema rather than relying on a generic Link
-schema.
-
-That said, we define a backwards compatible Link format that is isomorphic with
-the old format and supported by existing layouts:
-
-Old Field Name  | New Field Name
---------------- | -----------------------------------------------
-`_type: "link"` | `attestation_type: "https://in-toto.io/Link/v1"`
-`products`      | `subject`
-`materials`     | `materials`
-`name`          | `name`
-`command`       | `command`
-`byproducts`    | `byproducts`
-`environment`   | `environment`
-
-## Notes
+## Design notes
 
 Attestations SHOULD be designed to encourage policies to be "monotonic," meaning
 that deleting an attestation will never turn a DENY decision into an ALLOW. One
@@ -318,7 +87,48 @@ should never use a subject other than `git_commit`.
 
 # Examples
 
-## Custom-type attestations
+## Provenance example
+
+A provenance-type attestation describing how the
+[curl 7.72.0 source tarballs](https://curl.se/download.html) were built,
+pretending they were built on
+[GitHub Actions](https://github.com/features/actions).
+
+```jsonc
+{
+  // Common attestation fields:
+  "attestation_type": "https://in-toto.io/Provenance/v1",
+  "subject": {
+    "curl-7.72.0.tar.bz2": { "sha256": "ad91970864102a59765e20ce16216efc9d6ad381471f7accceceab7d905703ef" },
+    "curl-7.72.0.tar.gz":  { "sha256": "d4d5899a3868fbb6ae1856c3e55a32ce35913de3956d1973caccd37bd0174fa2" },
+    "curl-7.72.0.tar.xz":  { "sha256": "0ded0808c4d85f2ee0db86980ae610cc9d165e9ca9da466196cc73c346513713" },
+    "curl-7.72.0.zip":     { "sha256": "e363cc5b4e500bfc727106434a2578b38440aa18e105d57576f3d8f2abebf888" }
+  },
+  "materials": {
+    "git+https://github.com/curl/curl@curl-7_72_0": { "git_commit": "9d954e49bce3706a9a2efb119ecd05767f0f2a9e" },
+    "github_hosted_vm:ubuntu-18.04:20210123.1": null,
+    "git+https://github.com/actions/checkout@v2":        { "git_commit": "5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f" },
+    "git+https://github.com/actions/upload-artifact@v2": { "git_commit": "e448a9b857ee2131e752b06002bf0e093c65e571" },
+    "pkg:deb/debian/stunnel4@5.50-3?arch=amd64":               { "sha256": "e1731ae217fcbc64d4c00d707dcead45c828c5f762bcf8cc56d87de511e096fa" },
+    "pkg:deb/debian/python-impacket@0.9.15-5?arch=all":        { "sha256": "71fa2e67376c8bc03429e154628ddd7b196ccf9e79dec7319f9c3a312fd76469" },
+    "pkg:deb/debian/libzstd-dev@1.3.8+dfsg-3?arch=amd64":      { "sha256": "91442b0ae04afc25ab96426761bbdf04b0e3eb286fdfbddb1e704444cb12a625" },
+    "pkg:deb/debian/libbrotli-dev@1.0.7-2+deb10u1?arch=amd64": { "sha256": "05b6e467173c451b6211945de47ac0eda2a3dccb3cc7203e800c633f74de8b4f" }
+  },
+  // Provenance-specific fields:
+  "builder": { "id": "https://github.com/Attestations/GitHubHostedActions@v1" },
+  "recipe": {
+    "type": "https://github.com/Attestations/GitHubActionsWorkflow@v1",
+    "material": "git+https://github.com/curl/curl@curl-7_72_0",
+    "entry_point": "build.yaml:maketgz"
+  },
+  "metadata": {
+    "build_timestamp": "2020-08-19T08:38:00Z",
+    "materials_complete": false
+  }
+}
+```
+
+## Custom-type examples
 
 In many cases, custom-type attestations would be a more natural fit, as shown
 below. Such custom attestations are not yet supported by in-toto because the
@@ -751,12 +561,4 @@ as explained in
 Chapter 14, page 328, "Ensure Unambiguous Provenance." Instead, we recommend
 keying primarily by resource name, in addition to content hash.
 
-[ArtifactCollection]: #ArtifactCollection
-[Package URL]: https://github.com/package-url/purl-spec/
-[RFC 3339]: https://tools.ietf.org/html/rfc3339
-[RFC 3986]: https://tools.ietf.org/html/rfc3986
-[SPDX Download Location]: https://spdx.github.io/spdx-spec/3-package-information/#37-package-download-location
-[Timestamp]: #Timestamp
-[TypeURI]: #TypeURI
 [in-toto 0.9]: https://github.com/in-toto/docs/blob/v0.9/in-toto-spec.md
-[oci_image_id]: https://github.com/opencontainers/image-spec/blob/master/config.md#imageid
