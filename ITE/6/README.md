@@ -20,6 +20,16 @@ This specification is developed jointly with
 support the agreed-upon format once finalized. This way a single link file will
 be usable by either system.
 
+# Goals
+
+*   Standardize artifact metadata without being specific to the consumer (e.g.
+    in-toto or Binary Authorization). This way CI/CD pipelines, vulnerability
+    scanners, and other systems can generate a single set of attestations that
+    can be consumed by anyone.
+
+*   Make it possible to write policies (layouts) that take advantage of
+    structured information.
+
 # Specification
 
 ## Introduction
